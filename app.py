@@ -247,5 +247,12 @@ def index():
     return render_template_string(load_html_template())
 
 
+@app.route("/api/data/count", methods=["GET"])
+def get_data_count():
+    """Возвращает общее количество записей в БД"""
+    count = SensorData.query.count()
+    return jsonify({"count": count}), 200
+
+
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)

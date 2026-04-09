@@ -106,12 +106,30 @@
         }
 
         /* Разные цвета для разных датчиков */
-        .sensor-tile:nth-child(1) { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .sensor-tile:nth-child(2) { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-        .sensor-tile:nth-child(3) { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-        .sensor-tile:nth-child(4) { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
-        .sensor-tile:nth-child(5) { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
-        .sensor-tile:nth-child(6) { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333; }
+        .sensor-tile:nth-child(1) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .sensor-tile:nth-child(2) {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .sensor-tile:nth-child(3) {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .sensor-tile:nth-child(4) {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        .sensor-tile:nth-child(5) {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .sensor-tile:nth-child(6) {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #333;
+        }
 
         .tile-header {
             display: flex;
@@ -272,7 +290,9 @@
             margin-bottom: 20px;
         }
 
-        select, button, input {
+        select,
+        button,
+        input {
             padding: 10px 16px;
             border-radius: 40px;
             border: 1px solid #cbd5e1;
@@ -382,19 +402,19 @@
             .sensors-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .dashboard {
                 flex-direction: column;
             }
-            
+
             .sensors-panel {
                 max-width: 100%;
             }
-            
+
             .main-panel {
                 min-width: auto;
             }
-            
+
             .admin-panel {
                 width: 100%;
                 right: -100%;
@@ -412,7 +432,8 @@
                 <div style="text-align: center; padding: 20px; color: #94a3b8;">Загрузка...</div>
             </div>
             <button id="refreshSensorsBtn" style="margin-top: 12px; width:100%;">🔄 Обновить список</button>
-            <button id="openAdminBtn" style="margin-top: 12px; width:100%; background: #8b5cf6;">🔐 Админ панель</button>
+            <button id="openAdminBtn" style="margin-top: 12px; width:100%; background: #8b5cf6;">🔐 Админ
+                панель</button>
         </div>
 
         <div class="main-panel">
@@ -439,9 +460,12 @@
                         <span class="status-badge" id="liveStatus">🟢 онлайн</span>
                     </div>
                     <div class="sensor-metrics">
-                        <div class="metric">🌡️ Температура<br><span class="metric-value" id="tempVal">--</span> <span class="metric-unit">°C</span></div>
-                        <div class="metric">💧 Влажность<br><span class="metric-value" id="humVal">--</span> <span class="metric-unit">%</span></div>
-                        <div class="metric">⏲️ Давление<br><span class="metric-value" id="pressVal">--</span> <span class="metric-unit">гПа</span></div>
+                        <div class="metric">🌡️ Температура<br><span class="metric-value" id="tempVal">--</span> <span
+                                class="metric-unit">°C</span></div>
+                        <div class="metric">💧 Влажность<br><span class="metric-value" id="humVal">--</span> <span
+                                class="metric-unit">%</span></div>
+                        <div class="metric">⏲️ Давление<br><span class="metric-value" id="pressVal">--</span> <span
+                                class="metric-unit">гПа</span></div>
                     </div>
                 </div>
 
@@ -495,7 +519,8 @@
             <div id="loginForm" class="login-form">
                 <h3>Вход в админ панель</h3>
                 <input type="text" id="adminUsername" placeholder="Логин" style="width: 100%; margin-bottom: 10px;">
-                <input type="password" id="adminPassword" placeholder="Пароль" style="width: 100%; margin-bottom: 10px;">
+                <input type="password" id="adminPassword" placeholder="Пароль"
+                    style="width: 100%; margin-bottom: 10px;">
                 <button id="adminLoginBtn" style="width: 100%;">Войти</button>
             </div>
 
@@ -508,7 +533,8 @@
 
                 <h4>Удалить данные датчика</h4>
                 <select id="adminDeviceSelect" style="width: 100%; margin-bottom: 10px;"></select>
-                <button id="adminDeleteDeviceBtn" class="danger" style="width: 100%;">🗑️ Удалить данные выбранного датчика</button>
+                <button id="adminDeleteDeviceBtn" class="danger" style="width: 100%;">🗑️ Удалить данные выбранного
+                    датчика</button>
 
                 <hr>
 
@@ -520,7 +546,8 @@
                     <input type="datetime-local" id="adminStartDate">
                     <input type="datetime-local" id="adminEndDate">
                 </div>
-                <button id="adminDeleteRangeBtn" class="warning" style="width: 100%;">🗑️ Удалить данные за период</button>
+                <button id="adminDeleteRangeBtn" class="warning" style="width: 100%;">🗑️ Удалить данные за
+                    период</button>
 
                 <hr>
 
@@ -540,17 +567,17 @@
         let updateInterval = null;
         let isAdmin = false;
         let allDevicesData = []; // Храним данные всех датчиков для сетки
-        
+
         // Состояние отображения: 'grid' или 'detail'
         let viewMode = 'grid';
 
         // Функция для обновления границ графика
         function updateChartBounds(chart, values, metric) {
             if (!values || values.length === 0) return;
-            
+
             let minVal = Math.min(...values);
             let maxVal = Math.max(...values);
-            
+
             // Если все значения одинаковые, добавляем искусственный диапазон
             if (minVal === maxVal) {
                 if (metric === 'temperature') {
@@ -575,14 +602,14 @@
                 }
                 minVal = minVal - padding;
                 maxVal = maxVal + padding;
-                
+
                 // Для влажности не уходим ниже 0 и выше 100
                 if (metric === 'humidity') {
                     minVal = Math.max(0, minVal);
                     maxVal = Math.min(100, maxVal);
                 }
             }
-            
+
             // Обновляем границы
             if (chart.options.scales && chart.options.scales.y) {
                 chart.options.scales.y.min = Math.floor(minVal * 10) / 10;
@@ -606,10 +633,10 @@
             currentDevice = deviceName;
             document.getElementById('gridView').style.display = 'none';
             document.getElementById('detailView').style.display = 'block';
-            
+
             // Обновляем хайлайт в боковой панели
             highlightSelectedSensor(deviceName);
-            
+
             // Загружаем данные для выбранного датчика
             loadLatestData(deviceName);
             loadChartData(deviceName);
@@ -632,23 +659,23 @@
             try {
                 const devicesResponse = await fetch('/api/devices');
                 const devices = await devicesResponse.json();
-                
+
                 const latestResponse = await fetch('/api/data/latest');
                 const latestData = await latestResponse.json();
-                
+
                 const container = document.getElementById('sensorsGrid');
-                
+
                 if (devices.length === 0) {
                     container.innerHTML = '<div class="empty-grid">📭 Нет данных<br>Запустите эмулятор датчиков</div>';
                     return;
                 }
-                
+
                 // Создаем карту последних данных по device_name
                 const latestMap = {};
                 latestData.forEach(item => {
                     latestMap[item.device_name] = item;
                 });
-                
+
                 // Создаем сетку
                 let gridHtml = '';
                 devices.forEach((device, index) => {
@@ -658,7 +685,7 @@
                     const press = latest ? latest.pressure.toFixed(1) : '--';
                     const timestamp = latest ? new Date(latest.timestamp) : null;
                     const timeStr = timestamp ? timestamp.toLocaleTimeString() : 'нет данных';
-                    
+
                     // Определяем статус онлайн/оффлайн
                     let status = '🟢 онлайн';
                     let statusColor = '';
@@ -672,7 +699,7 @@
                     } else {
                         status = '⚫ нет данных';
                     }
-                    
+
                     gridHtml += `
                         <div class="sensor-tile" onclick="showDetailView('${escapeHtml(device)}')">
                             <div class="tile-header">
@@ -699,7 +726,7 @@
                         </div>
                     `;
                 });
-                
+
                 container.innerHTML = gridHtml;
             } catch (error) {
                 console.error('Ошибка загрузки сетки:', error);
@@ -778,7 +805,7 @@
 
         function escapeHtml(str) {
             if (!str) return '';
-            return str.replace(/[&<>]/g, function(m) {
+            return str.replace(/[&<>]/g, function (m) {
                 if (m === '&') return '&amp;';
                 if (m === '<') return '&lt;';
                 if (m === '>') return '&gt;';
@@ -894,16 +921,16 @@
                     chartInstance.data.labels = labels;
                     chartInstance.data.datasets[0].data = values;
                     chartInstance.data.datasets[0].label = `${deviceName} - ${metricName}`;
-                    
+
                     // Обновляем границы оси Y с отступами
                     updateChartBounds(chartInstance, values, metric);
-                    
+
                     chartInstance.update();
                 } else {
                     // Вычисляем начальные границы
                     let minVal = Math.min(...values);
                     let maxVal = Math.max(...values);
-                    
+
                     let padding;
                     if (metric === 'temperature') {
                         padding = Math.max(2, (maxVal - minVal) * 0.2);
@@ -912,18 +939,18 @@
                     } else {
                         padding = Math.max(3, (maxVal - minVal) * 0.1);
                     }
-                    
+
                     let yMin = minVal - padding;
                     let yMax = maxVal + padding;
-                    
+
                     if (metric === 'humidity') {
                         yMin = Math.max(0, yMin);
                         yMax = Math.min(100, yMax);
                     }
-                    
+
                     const finalYMin = Math.floor(yMin * 10) / 10;
                     const finalYMax = Math.ceil(yMax * 10) / 10;
-                    
+
                     const ctx = document.getElementById('mainChart').getContext('2d');
                     chartInstance = new Chart(ctx, {
                         type: 'line',
@@ -952,7 +979,7 @@
                                     mode: 'index',
                                     intersect: false,
                                     callbacks: {
-                                        label: function(context) {
+                                        label: function (context) {
                                             let label = context.dataset.label || '';
                                             let value = context.parsed.y;
                                             let unit = '';
@@ -971,7 +998,7 @@
                                         minRotation: 45,
                                         autoSkip: true,
                                         maxTicksLimit: 8,
-                                        callback: function(val, index) {
+                                        callback: function (val, index) {
                                             const label = this.getLabelForValue(val);
                                             if (label && label.length > 16) {
                                                 return label.substring(11, 16);
@@ -995,7 +1022,7 @@
                                         font: { size: 12 }
                                     },
                                     ticks: {
-                                        callback: function(value) {
+                                        callback: function (value) {
                                             return value.toFixed(1);
                                         }
                                     },

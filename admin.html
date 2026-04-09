@@ -28,7 +28,7 @@
             border-radius: 24px;
             padding: 25px;
             margin-bottom: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
 
         .card h2 {
@@ -50,7 +50,8 @@
             color: #475569;
         }
 
-        input, select {
+        input,
+        select {
             width: 100%;
             padding: 12px;
             border: 1px solid #e2e8f0;
@@ -163,6 +164,11 @@
             background: #fee2e2;
             color: #991b1b;
         }
+
+        .status.info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
     </style>
 </head>
 
@@ -170,7 +176,7 @@
     <div class="container">
         <div class="card">
             <h2>🔐 Админ панель</h2>
-            
+
             <div id="loginSection">
                 <div class="login-form">
                     <div class="form-group">
@@ -185,7 +191,7 @@
 
             <div id="adminSection" style="display: none;">
                 <div id="statusMsg"></div>
-                
+
                 <div class="warning-box">
                     <h4>⚠️ Внимание!</h4>
                     <p>Все операции по удалению данных НЕОБРАТИМЫ. Пожалуйста, будьте осторожны.</p>
@@ -195,7 +201,8 @@
                 <div class="form-group">
                     <select id="deviceSelect"></select>
                 </div>
-                <button class="btn-danger" id="deleteDeviceBtn" style="width: 100%;">Удалить данные выбранного датчика</button>
+                <button class="btn-danger" id="deleteDeviceBtn" style="width: 100%;">Удалить данные выбранного
+                    датчика</button>
 
                 <hr>
 
@@ -207,13 +214,28 @@
                 </div>
                 <div style="display: flex; gap: 10px;">
                     <div class="form-group" style="flex: 1;">
+                        <label>С</label>
                         <input type="datetime-local" id="startDate">
                     </div>
                     <div class="form-group" style="flex: 1;">
+                        <label>По</label>
                         <input type="datetime-local" id="endDate">
                     </div>
                 </div>
                 <button class="btn-warning" id="deleteRangeBtn" style="width: 100%;">Удалить данные за период</button>
+
+                <hr>
+
+                <h3>📊 Статистика БД</h3>
+                <div class="form-group">
+                    <button class="btn-primary" id="statsBtn" style="width: 100%;">Показать статистику</button>
+                </div>
+                <div id="statsDisplay" style="background: #f1f5f9; padding: 12px; border-radius: 12px; display: none;">
+                    <p><strong>📈 Всего записей:</strong> <span id="totalRecords">0</span></p>
+                    <p><strong>📊 Количество датчиков:</strong> <span id="statsDevicesCount">0</span></p>
+                    <p><strong>📅 Первая запись:</strong> <span id="firstRecord">—</span></p>
+                    <p><strong>📅 Последняя запись:</strong> <span id="lastRecord">—</span></p>
+                </div>
 
                 <hr>
 
@@ -223,13 +245,23 @@
 
                 <button class="btn-secondary" id="logoutBtn" style="width: 100%;">🚪 Выйти</button>
             </div>
-            
+
             <a href="/" class="back-link">← Вернуться на главную</a>
         </div>
     </div>
 
     <script>
         let isLoggedIn = false;
+
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('statusMsg');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+            setTimeout(() => {
+                if (statusDiv.innerHTML === `<div class="status ${type}">${message}</div>`) {
+                    statusDiv.innerHTML = '';
+                }
+            }, 3000);
+        }
 
         async function checkAuth() {
             try {
@@ -240,6 +272,7 @@
                     document.getElementById('loginSection').style.display = 'none';
                     document.getElementById('adminSection').style.display = 'block';
                     await loadDevices();
+                    await loadStats();
                 }
             } catch (error) {
                 console.error('Ошибка проверки авторизации:', error);
@@ -262,6 +295,7 @@
                     document.getElementById('loginSection').style.display = 'none';
                     document.getElementById('adminSection').style.display = 'block';
                     await loadDevices();
+                    await loadStats();
                     showStatus('Вход выполнен успешно!', 'success');
                 } else {
                     showStatus('Неверный логин или пароль', 'error');
@@ -287,22 +321,72 @@
             try {
                 const response = await fetch('/api/devices');
                 const devices = await response.json();
-                
+
                 const deviceSelect = document.getElementById('deviceSelect');
                 const rangeDeviceSelect = document.getElementById('rangeDeviceSelect');
-                
-                deviceSelect.innerHTML = devices.map(d => `<option value="${d}">${d}</option>`).join('');
-                rangeDeviceSelect.innerHTML = '<option value="">Все датчики</option>' + 
-                    devices.map(d => `<option value="${d}">${d}</option>`).join('');
+
+                if (devices.length === 0) {
+                    deviceSelect.innerHTML = '<option value="">Нет датчиков</option>';
+                    rangeDeviceSelect.innerHTML = '<option value="">Все датчики</option><option value="" disabled>Нет датчиков</option>';
+                    return;
+                }
+
+                deviceSelect.innerHTML = devices.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+                rangeDeviceSelect.innerHTML = '<option value="">Все датчики</option>' +
+                    devices.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
             } catch (error) {
                 console.error('Ошибка загрузки устройств:', error);
             }
         }
 
+        async function loadStats() {
+            try {
+                // Получаем общее количество записей
+                const allDataResponse = await fetch('/api/data/all?limit=1');
+                const allData = await allDataResponse.json();
+
+                // Получаем диапазон дат
+                const rangeResponse = await fetch('/api/data/range');
+                const rangeData = await rangeResponse.json();
+
+                // Получаем список устройств
+                const devicesResponse = await fetch('/api/devices');
+                const devices = await devicesResponse.json();
+
+                // Получаем точное количество записей через отдельный эндпоинт
+                let totalRecords = '...';
+                try {
+                    const countResponse = await fetch('/api/data/count');
+                    if (countResponse.ok) {
+                        const countData = await countResponse.json();
+                        totalRecords = countData.count;
+                    } else {
+                        totalRecords = allData.length > 0 ? '>=' + allData.length : 0;
+                    }
+                } catch {
+                    totalRecords = allData.length > 0 ? '>=' + allData.length : 0;
+                }
+
+                document.getElementById('totalRecords').innerText = totalRecords;
+                document.getElementById('statsDevicesCount').innerText = devices.length;
+                document.getElementById('firstRecord').innerText = rangeData.min_date ? new Date(rangeData.min_date).toLocaleString() : '—';
+                document.getElementById('lastRecord').innerText = rangeData.max_date ? new Date(rangeData.max_date).toLocaleString() : '—';
+
+                document.getElementById('statsDisplay').style.display = 'block';
+            } catch (error) {
+                console.error('Ошибка загрузки статистики:', error);
+                document.getElementById('statsDisplay').style.display = 'block';
+                document.getElementById('totalRecords').innerText = 'Ошибка';
+            }
+        }
+
         async function deleteDevice() {
             const device = document.getElementById('deviceSelect').value;
-            if (!device) return;
-            
+            if (!device) {
+                showStatus('Выберите датчик для удаления', 'error');
+                return;
+            }
+
             if (confirm(`Удалить ВСЕ данные датчика "${device}"? Это действие необратимо!`)) {
                 try {
                     const response = await fetch(`/api/admin/delete/device/${encodeURIComponent(device)}`, {
@@ -312,8 +396,127 @@
                         const result = await response.json();
                         showStatus(`Удалено ${result.deleted_count} записей датчика "${device}"`, 'success');
                         await loadDevices();
+                        await loadStats();
                     } else {
-                        showStatus('Ошибка при удалении', 'error');
+                        const error = await response.json();
+                        showStatus(`Ошибка: ${error.error || 'Неизвестная ошибка'}`, 'error');
                     }
                 } catch (error) {
-                    showStatus('О
+                    showStatus('Ошибка подключения к серверу', 'error');
+                }
+            }
+        }
+
+        async function deleteRange() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const device = document.getElementById('rangeDeviceSelect').value;
+
+            if (!startDate || !endDate) {
+                showStatus('Выберите начальную и конечную дату', 'error');
+                return;
+            }
+
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            if (start > end) {
+                showStatus('Начальная дата не может быть позже конечной', 'error');
+                return;
+            }
+
+            const message = `Удалить данные за период с ${start.toLocaleString()} по ${end.toLocaleString()}${device ? ` для датчика "${device}"` : ' для всех датчиков'}? Это действие необратимо!`;
+
+            if (confirm(message)) {
+                try {
+                    const response = await fetch('/api/admin/delete/range', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            start_date: startDate,
+                            end_date: endDate,
+                            device_name: device || null
+                        })
+                    });
+                    if (response.ok) {
+                        const result = await response.json();
+                        showStatus(`Удалено ${result.deleted_count} записей`, 'success');
+                        await loadDevices();
+                        await loadStats();
+                        // Очищаем поля дат
+                        document.getElementById('startDate').value = '';
+                        document.getElementById('endDate').value = '';
+                    } else {
+                        const error = await response.json();
+                        showStatus(`Ошибка: ${error.error || 'Неизвестная ошибка'}`, 'error');
+                    }
+                } catch (error) {
+                    showStatus('Ошибка подключения к серверу', 'error');
+                }
+            }
+        }
+
+        async function deleteAll() {
+            if (confirm('⚠️ Удалить ВСЕ данные всех датчиков? Это действие необратимо!')) {
+                if (confirm('ПОСЛЕДНЕЕ ПРЕДУПРЕЖДЕНИЕ! Вы уверены, что хотите удалить ВСЕ данные?')) {
+                    try {
+                        const response = await fetch('/api/admin/delete/all', { method: 'DELETE' });
+                        if (response.ok) {
+                            const result = await response.json();
+                            showStatus(`Удалено ${result.deleted_count} записей`, 'success');
+                            await loadDevices();
+                            await loadStats();
+                        } else {
+                            const error = await response.json();
+                            showStatus(`Ошибка: ${error.error || 'Неизвестная ошибка'}`, 'error');
+                        }
+                    } catch (error) {
+                        showStatus('Ошибка подключения к серверу', 'error');
+                    }
+                }
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function (m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        // Устанавливаем значения дат по умолчанию (последние 24 часа)
+        function setDefaultDateRange() {
+            const now = new Date();
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            const formatDateTime = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${year}-${month}-${day}T${hours}:${minutes}`;
+            };
+
+            document.getElementById('startDate').value = formatDateTime(yesterday);
+            document.getElementById('endDate').value = formatDateTime(now);
+        }
+
+        // Инициализация обработчиков событий
+        document.getElementById('loginBtn').onclick = login;
+        document.getElementById('logoutBtn').onclick = logout;
+        document.getElementById('deleteDeviceBtn').onclick = deleteDevice;
+        document.getElementById('deleteRangeBtn').onclick = deleteRange;
+        document.getElementById('deleteAllBtn').onclick = deleteAll;
+        document.getElementById('statsBtn').onclick = loadStats;
+
+        // Запуск
+        setDefaultDateRange();
+        checkAuth();
+    </script>
+</body>
+
+</html>
