@@ -82,7 +82,6 @@
             margin-top: 4px;
         }
 
-        /* Сетка датчиков 2x2 */
         .sensors-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -105,7 +104,6 @@
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
         }
 
-        /* Разные цвета для разных датчиков */
         .sensor-tile:nth-child(1) {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
@@ -198,13 +196,6 @@
             color: #94a3b8;
         }
 
-        /* Детальный вид (график) */
-        .detail-view {
-            margin-top: 24px;
-            padding-top: 24px;
-            border-top: 2px solid #e2e8f0;
-        }
-
         .detail-header {
             display: flex;
             justify-content: space-between;
@@ -212,11 +203,6 @@
             margin-bottom: 20px;
             flex-wrap: wrap;
             gap: 12px;
-        }
-
-        .detail-title {
-            font-size: 1.3rem;
-            font-weight: 700;
         }
 
         .back-button {
@@ -288,6 +274,7 @@
             gap: 12px;
             flex-wrap: wrap;
             margin-bottom: 20px;
+            align-items: center;
         }
 
         select,
@@ -336,7 +323,6 @@
             margin: 20px 0;
         }
 
-        /* Админ панель */
         .admin-panel {
             position: fixed;
             top: 0;
@@ -398,6 +384,29 @@
             flex: 1;
         }
 
+        .live-badge {
+            background: #ef4444;
+            color: white;
+            font-size: 0.7rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.6;
+            }
+        }
+
         @media (max-width: 900px) {
             .sensors-grid {
                 grid-template-columns: 1fr;
@@ -437,7 +446,6 @@
         </div>
 
         <div class="main-panel">
-            <!-- Сетка датчиков 2x2 (главный вид) -->
             <div id="gridView">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2>📊 Текущие показания</h2>
@@ -448,7 +456,6 @@
                 </div>
             </div>
 
-            <!-- Детальный вид с графиком (изначально скрыт) -->
             <div id="detailView" style="display: none;">
                 <div class="detail-header">
                     <button class="back-button" id="backToGridBtn">← Назад к списку датчиков</button>
@@ -479,10 +486,11 @@
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <span>📅 Период:</span>
                         <select id="periodPreset">
-                            <option value="custom">Произвольный</option>
+                            <option value="3">🔴 В реальном времени (3 часа)</option>
                             <option value="24">Последние 24 часа</option>
                             <option value="168">Последние 7 дней</option>
                             <option value="720">Последние 30 дней</option>
+                            <option value="custom">Произвольный</option>
                             <option value="all">Вся история</option>
                         </select>
                     </div>
@@ -495,19 +503,14 @@
 
                     <button id="refreshChartBtn">🔄 Обновить график</button>
                 </div>
+
                 <div class="chart-container">
                     <canvas id="mainChart" width="800" height="350"></canvas>
-                </div>
-
-                <hr>
-                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                    <button id="exportCSVBtn" style="background: #059669;">📎 Экспорт CSV</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Админ панель -->
     <div id="adminOverlay" class="admin-overlay"></div>
     <div id="adminPanel" class="admin-panel">
         <div class="admin-header">
@@ -565,141 +568,178 @@
         let currentDevice = null;
         let chartInstance = null;
         let updateInterval = null;
+        let liveChartInterval = null;
         let isAdmin = false;
-        let allDevicesData = []; // Храним данные всех датчиков для сетки
-
-        // Состояние отображения: 'grid' или 'detail'
         let viewMode = 'grid';
+        let currentMetric = 'temperature';
+        let isLiveMode = false;
 
-        // Функция для обновления границ графика
-        function updateChartBounds(chart, values, metric) {
-            if (!values || values.length === 0) return;
+        function formatDateTimeLocal(date) {
+            return date.toISOString().slice(0, 16);
+        }
 
-            let minVal = Math.min(...values);
-            let maxVal = Math.max(...values);
+        function setDefaultCustomRange() {
+            const now = new Date();
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+            const tomorrowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+            document.getElementById('startDate').value = formatDateTimeLocal(todayStart);
+            document.getElementById('endDate').value = formatDateTimeLocal(tomorrowStart);
+        }
 
-            // Если все значения одинаковые, добавляем искусственный диапазон
-            if (minVal === maxVal) {
-                if (metric === 'temperature') {
-                    minVal = minVal - 2;
-                    maxVal = maxVal + 2;
-                } else if (metric === 'humidity') {
-                    minVal = Math.max(0, minVal - 5);
-                    maxVal = Math.min(100, maxVal + 5);
-                } else {
-                    minVal = minVal - 5;
-                    maxVal = maxVal + 5;
-                }
+        function formatXLabel(date, timeSpanHours) {
+            if (timeSpanHours > 720) {
+                return `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth() + 1).toString().padStart(2, '0')}.${date.getFullYear().toString().slice(-2)}`;
+            } else if (timeSpanHours > 48) {
+                return `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth() + 1).toString().padStart(2, '0')}`;
             } else {
-                // Добавляем отступы в зависимости от типа метрики
-                let padding;
-                if (metric === 'temperature') {
-                    padding = Math.max(2, (maxVal - minVal) * 0.2);
-                } else if (metric === 'humidity') {
-                    padding = Math.max(5, (maxVal - minVal) * 0.15);
-                } else {
-                    padding = Math.max(3, (maxVal - minVal) * 0.1);
-                }
-                minVal = minVal - padding;
-                maxVal = maxVal + padding;
-
-                // Для влажности не уходим ниже 0 и выше 100
-                if (metric === 'humidity') {
-                    minVal = Math.max(0, minVal);
-                    maxVal = Math.min(100, maxVal);
-                }
-            }
-
-            // Обновляем границы
-            if (chart.options.scales && chart.options.scales.y) {
-                chart.options.scales.y.min = Math.floor(minVal * 10) / 10;
-                chart.options.scales.y.max = Math.ceil(maxVal * 10) / 10;
-                chart.update('none'); // Обновляем без анимации для плавности
+                return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
             }
         }
 
-        // Переключение на сетку
+        function aggregateDataForChart(data, maxPoints = 150) {
+            if (!data || data.length === 0) return { labels: [], values: [], timeSpanHours: 0 };
+
+            const firstTime = new Date(data[0].timestamp);
+            const lastTime = new Date(data[data.length - 1].timestamp);
+            const timeSpanHours = (lastTime - firstTime) / (1000 * 3600);
+
+            if (data.length <= maxPoints) {
+                const labels = data.map(d => {
+                    const date = new Date(d.timestamp);
+                    return formatXLabel(date, timeSpanHours);
+                });
+                return { labels, values: data.map(d => d[currentMetric]), timeSpanHours };
+            }
+
+            const intervalSize = Math.ceil(data.length / maxPoints);
+            const aggregatedLabels = [];
+            const aggregatedValues = [];
+
+            for (let i = 0; i < data.length; i += intervalSize) {
+                const chunk = data.slice(i, Math.min(i + intervalSize, data.length));
+                if (chunk.length === 0) continue;
+
+                const avgValue = chunk.reduce((sum, d) => sum + d[currentMetric], 0) / chunk.length;
+                const midIndex = Math.floor(chunk.length / 2);
+                const midTimestamp = chunk[midIndex].timestamp;
+                const date = new Date(midTimestamp);
+
+                let label = formatXLabel(date, timeSpanHours);
+                aggregatedLabels.push(label);
+                aggregatedValues.push(avgValue);
+            }
+
+            return { labels: aggregatedLabels, values: aggregatedValues, timeSpanHours };
+        }
+
+        function updateChartBounds(chart, values, metric) {
+            if (!values || values.length === 0) return;
+            let minVal = Math.min(...values);
+            let maxVal = Math.max(...values);
+            if (minVal === maxVal) {
+                if (metric === 'temperature') { minVal = minVal - 2; maxVal = maxVal + 2; }
+                else if (metric === 'humidity') { minVal = Math.max(0, minVal - 5); maxVal = Math.min(100, maxVal + 5); }
+                else { minVal = minVal - 5; maxVal = maxVal + 5; }
+            } else {
+                let padding;
+                if (metric === 'temperature') padding = Math.max(2, (maxVal - minVal) * 0.2);
+                else if (metric === 'humidity') padding = Math.max(5, (maxVal - minVal) * 0.15);
+                else padding = Math.max(3, (maxVal - minVal) * 0.1);
+                minVal = minVal - padding;
+                maxVal = maxVal + padding;
+                if (metric === 'humidity') { minVal = Math.max(0, minVal); maxVal = Math.min(100, maxVal); }
+            }
+            if (chart.options.scales && chart.options.scales.y) {
+                chart.options.scales.y.min = Math.floor(minVal * 10) / 10;
+                chart.options.scales.y.max = Math.ceil(maxVal * 10) / 10;
+                chart.update('none');
+            }
+        }
+
         function showGridView() {
             viewMode = 'grid';
+            stopLiveChartUpdates();
             document.getElementById('gridView').style.display = 'block';
             document.getElementById('detailView').style.display = 'none';
             currentDevice = null;
             loadGridData();
         }
 
-        // Переключение на детальный вид
         function showDetailView(deviceName) {
             viewMode = 'detail';
             currentDevice = deviceName;
             document.getElementById('gridView').style.display = 'none';
             document.getElementById('detailView').style.display = 'block';
-
-            // Обновляем хайлайт в боковой панели
             highlightSelectedSensor(deviceName);
-
-            // Загружаем данные для выбранного датчика
             loadLatestData(deviceName);
+            checkAndStartLiveMode();
             loadChartData(deviceName);
         }
 
-        // Подсветка выбранного датчика в боковой панели
+        function checkAndStartLiveMode() {
+            const periodPreset = document.getElementById('periodPreset').value;
+            const isLive = (periodPreset === '3');
+            if (isLive && currentDevice) {
+                startLiveChartUpdates();
+            } else {
+                stopLiveChartUpdates();
+            }
+        }
+
+        function startLiveChartUpdates() {
+            if (liveChartInterval) clearInterval(liveChartInterval);
+            isLiveMode = true;
+            liveChartInterval = setInterval(() => {
+                if (viewMode === 'detail' && currentDevice && isLiveMode) {
+                    loadChartData(currentDevice);
+                    loadLatestData(currentDevice);
+                }
+            }, 10000);
+        }
+
+        function stopLiveChartUpdates() {
+            if (liveChartInterval) {
+                clearInterval(liveChartInterval);
+                liveChartInterval = null;
+            }
+            isLiveMode = false;
+        }
+
         function highlightSelectedSensor(deviceName) {
             const cards = document.querySelectorAll('.sensor-card');
             cards.forEach(card => {
-                if (card.getAttribute('data-device') === deviceName) {
-                    card.classList.add('active');
-                } else {
-                    card.classList.remove('active');
-                }
+                if (card.getAttribute('data-device') === deviceName) card.classList.add('active');
+                else card.classList.remove('active');
             });
         }
 
-        // Загрузка данных для сетки 2x2
         async function loadGridData() {
             try {
                 const devicesResponse = await fetch('/api/devices');
                 const devices = await devicesResponse.json();
-
                 const latestResponse = await fetch('/api/data/latest');
                 const latestData = await latestResponse.json();
-
                 const container = document.getElementById('sensorsGrid');
-
                 if (devices.length === 0) {
                     container.innerHTML = '<div class="empty-grid">📭 Нет данных<br>Запустите эмулятор датчиков</div>';
                     return;
                 }
-
-                // Создаем карту последних данных по device_name
                 const latestMap = {};
-                latestData.forEach(item => {
-                    latestMap[item.device_name] = item;
-                });
-
-                // Создаем сетку
+                latestData.forEach(item => { latestMap[item.device_name] = item; });
                 let gridHtml = '';
-                devices.forEach((device, index) => {
+                devices.forEach((device) => {
                     const latest = latestMap[device];
                     const temp = latest ? latest.temperature.toFixed(1) : '--';
                     const hum = latest ? latest.humidity.toFixed(1) : '--';
                     const press = latest ? latest.pressure.toFixed(1) : '--';
                     const timestamp = latest ? new Date(latest.timestamp) : null;
                     const timeStr = timestamp ? timestamp.toLocaleTimeString() : 'нет данных';
-
-                    // Определяем статус онлайн/оффлайн
                     let status = '🟢 онлайн';
-                    let statusColor = '';
                     if (timestamp) {
                         const diffSeconds = Math.floor((new Date() - timestamp) / 1000);
-                        if (diffSeconds > 60) {
-                            status = '🔴 оффлайн';
-                        } else if (diffSeconds > 10) {
-                            status = '🟡 ожидание';
-                        }
-                    } else {
-                        status = '⚫ нет данных';
-                    }
-
+                        if (diffSeconds > 60) status = '🔴 оффлайн';
+                        else if (diffSeconds > 10) status = '🟡 ожидание';
+                    } else status = '⚫ нет данных';
                     gridHtml += `
                         <div class="sensor-tile" onclick="showDetailView('${escapeHtml(device)}')">
                             <div class="tile-header">
@@ -707,26 +747,14 @@
                                 <span class="tile-status">${status}</span>
                             </div>
                             <div class="tile-metrics">
-                                <div class="tile-metric">
-                                    <span class="tile-metric-label">🌡️ Температура</span>
-                                    <span class="tile-metric-value">${temp}<span class="tile-metric-unit">°C</span></span>
-                                </div>
-                                <div class="tile-metric">
-                                    <span class="tile-metric-label">💧 Влажность</span>
-                                    <span class="tile-metric-value">${hum}<span class="tile-metric-unit">%</span></span>
-                                </div>
-                                <div class="tile-metric">
-                                    <span class="tile-metric-label">⏲️ Давление</span>
-                                    <span class="tile-metric-value">${press}<span class="tile-metric-unit">гПа</span></span>
-                                </div>
+                                <div class="tile-metric"><span class="tile-metric-label">🌡️ Температура</span><span class="tile-metric-value">${temp}<span class="tile-metric-unit">°C</span></span></div>
+                                <div class="tile-metric"><span class="tile-metric-label">💧 Влажность</span><span class="tile-metric-value">${hum}<span class="tile-metric-unit">%</span></span></div>
+                                <div class="tile-metric"><span class="tile-metric-label">⏲️ Давление</span><span class="tile-metric-value">${press}<span class="tile-metric-unit">гПа</span></span></div>
                             </div>
-                            <div class="tile-update-time">
-                                🕐 ${timeStr}
-                            </div>
+                            <div class="tile-update-time">🕐 ${timeStr}</div>
                         </div>
                     `;
                 });
-
                 container.innerHTML = gridHtml;
             } catch (error) {
                 console.error('Ошибка загрузки сетки:', error);
@@ -734,25 +762,19 @@
             }
         }
 
-        // Загрузка списка устройств в боковую панель
         async function loadDevices() {
             try {
                 const response = await fetch('/api/devices');
                 const devices = await response.json();
                 const latestResponse = await fetch('/api/data/latest');
                 const latestData = await latestResponse.json();
-
                 const container = document.getElementById('sensorsList');
                 if (devices.length === 0) {
                     container.innerHTML = '<div style="text-align: center; padding: 20px; color: #94a3b8;">Нет данных<br>Запустите эмулятор</div>';
                     return;
                 }
-
                 const latestMap = {};
-                latestData.forEach(item => {
-                    latestMap[item.device_name] = item;
-                });
-
+                latestData.forEach(item => { latestMap[item.device_name] = item; });
                 container.innerHTML = '';
                 devices.forEach(device => {
                     const latest = latestMap[device];
@@ -761,196 +783,103 @@
                     const card = document.createElement('div');
                     card.className = `sensor-card ${currentDevice === device ? 'active' : ''}`;
                     card.setAttribute('data-device', device);
-                    card.innerHTML = `
-                        <div>
-                            <div class="sensor-name">${escapeHtml(device)}</div>
-                            <div class="sensor-last">последнее: ${lastValue} ${lastTime ? `(${lastTime})` : ''}</div>
-                        </div>
-                        <span style="font-size: 20px;">📊</span>
-                    `;
+                    card.innerHTML = `<div><div class="sensor-name">${escapeHtml(device)}</div><div class="sensor-last">последнее: ${lastValue} ${lastTime ? `(${lastTime})` : ''}</div></div><span style="font-size: 20px;">📊</span>`;
                     card.onclick = () => {
-                        if (viewMode === 'grid') {
-                            showDetailView(device);
-                        } else {
-                            currentDevice = device;
-                            highlightSelectedSensor(device);
-                            loadLatestData(device);
-                            loadChartData(device);
-                        }
+                        if (viewMode === 'grid') showDetailView(device);
+                        else { currentDevice = device; highlightSelectedSensor(device); loadLatestData(device); checkAndStartLiveMode(); loadChartData(device); }
                     };
                     container.appendChild(card);
                 });
-
-                // Обновляем админские выпадающие списки
-                if (isAdmin) {
-                    updateAdminDeviceLists(devices);
-                }
-            } catch (error) {
-                console.error('Ошибка загрузки устройств:', error);
-            }
+                if (isAdmin) updateAdminDeviceLists(devices);
+            } catch (error) { console.error('Ошибка загрузки устройств:', error); }
         }
 
         function updateAdminDeviceLists(devices) {
             const deviceSelect = document.getElementById('adminDeviceSelect');
             const rangeDeviceSelect = document.getElementById('adminRangeDeviceSelect');
-
-            if (deviceSelect) {
-                deviceSelect.innerHTML = devices.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
-            }
-            if (rangeDeviceSelect) {
-                rangeDeviceSelect.innerHTML = '<option value="">Все датчики</option>' +
-                    devices.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
-            }
+            if (deviceSelect) deviceSelect.innerHTML = devices.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+            if (rangeDeviceSelect) rangeDeviceSelect.innerHTML = '<option value="">Все датчики</option>' + devices.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
         }
 
-        function escapeHtml(str) {
-            if (!str) return '';
-            return str.replace(/[&<>]/g, function (m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
-        }
+        function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
 
-        // Загрузка последних данных для детального вида
         async function loadLatestData(deviceName) {
             try {
                 const response = await fetch(`/api/data/device/${encodeURIComponent(deviceName)}?limit=1&sort=desc`);
                 const data = await response.json();
-
                 if (data && data.length > 0) {
                     const latest = data[0];
                     document.getElementById('currentSensorName').innerHTML = `📌 ${deviceName}`;
                     document.getElementById('tempVal').innerHTML = latest.temperature.toFixed(1);
                     document.getElementById('humVal').innerHTML = latest.humidity.toFixed(1);
                     document.getElementById('pressVal').innerHTML = latest.pressure.toFixed(1);
-
                     const updateTime = new Date(latest.timestamp);
                     const now = new Date();
                     const diffSeconds = Math.floor((now - updateTime) / 1000);
                     const statusEl = document.getElementById('liveStatus');
-                    if (diffSeconds < 10) {
-                        statusEl.innerHTML = '🟢 онлайн';
-                        statusEl.style.background = '#10b981';
-                    } else if (diffSeconds < 60) {
-                        statusEl.innerHTML = `🟡 ${diffSeconds} сек назад`;
-                        statusEl.style.background = '#f59e0b';
-                    } else {
-                        statusEl.innerHTML = `🔴 ${Math.floor(diffSeconds / 60)} мин назад`;
-                        statusEl.style.background = '#ef4444';
-                    }
+                    if (diffSeconds < 10) { statusEl.innerHTML = '🟢 онлайн'; statusEl.style.background = '#10b981'; }
+                    else if (diffSeconds < 60) { statusEl.innerHTML = `🟡 ${diffSeconds} сек назад`; statusEl.style.background = '#f59e0b'; }
+                    else { statusEl.innerHTML = `🔴 ${Math.floor(diffSeconds / 60)} мин назад`; statusEl.style.background = '#ef4444'; }
                 } else {
                     document.getElementById('currentSensorName').innerHTML = `📌 ${deviceName} (нет данных)`;
-                    document.getElementById('tempVal').innerHTML = '--';
-                    document.getElementById('humVal').innerHTML = '--';
-                    document.getElementById('pressVal').innerHTML = '--';
-                    document.getElementById('liveStatus').innerHTML = '⚫ нет данных';
-                    document.getElementById('liveStatus').style.background = '#64748b';
+                    document.getElementById('tempVal').innerHTML = '--'; document.getElementById('humVal').innerHTML = '--'; document.getElementById('pressVal').innerHTML = '--';
+                    document.getElementById('liveStatus').innerHTML = '⚫ нет данных'; document.getElementById('liveStatus').style.background = '#64748b';
                 }
-            } catch (error) {
-                console.error('Ошибка загрузки данных:', error);
-            }
+            } catch (error) { console.error('Ошибка загрузки данных:', error); }
         }
 
-        // Загрузка графика с улучшенными границами
+        function getMetricLabel(metric) {
+            if (metric === 'temperature') return 'Температура (°C)';
+            if (metric === 'humidity') return 'Влажность (%)';
+            return 'Давление (гПа)';
+        }
+
         async function loadChartData(deviceName) {
             if (!deviceName) return;
-
-            const metric = document.getElementById('metricType').value;
+            currentMetric = document.getElementById('metricType').value;
             const periodPreset = document.getElementById('periodPreset').value;
-
-            let url = `/api/data/device/${encodeURIComponent(deviceName)}?limit=2000`;
-
+            let url = `/api/data/device/${encodeURIComponent(deviceName)}?limit=5000`;
             if (periodPreset === 'custom') {
                 const startDate = document.getElementById('startDate').value;
                 const endDate = document.getElementById('endDate').value;
-                if (startDate && endDate) {
-                    url += `&start_date=${startDate}&end_date=${endDate}`;
-                }
+                if (startDate && endDate) url += `&start_date=${startDate}&end_date=${endDate}`;
             } else if (periodPreset !== 'all') {
                 url += `&hours=${periodPreset}`;
             }
-
             try {
                 const response = await fetch(url);
-                const data = await response.json();
-
+                let data = await response.json();
                 if (data.length === 0) {
-                    if (chartInstance) {
-                        chartInstance.data.labels = ['Нет данных'];
-                        chartInstance.data.datasets[0].data = [0];
-                        chartInstance.update();
-                    } else {
-                        const ctx = document.getElementById('mainChart').getContext('2d');
-                        chartInstance = new Chart(ctx, {
-                            type: 'line',
-                            data: {
-                                labels: ['Нет данных'],
-                                datasets: [{
-                                    label: 'Нет данных',
-                                    data: [0],
-                                    borderColor: '#3b82f6',
-                                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                                    tension: 0.3,
-                                    fill: true
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: true,
-                                plugins: { legend: { position: 'top' } }
-                            }
-                        });
-                    }
+                    if (chartInstance) { chartInstance.data.labels = ['Нет данных']; chartInstance.data.datasets[0].data = [0]; chartInstance.update(); }
+                    else { const ctx = document.getElementById('mainChart').getContext('2d'); chartInstance = new Chart(ctx, { type: 'line', data: { labels: ['Нет данных'], datasets: [{ label: 'Нет данных', data: [0], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', tension: 0.3, fill: true }] }, options: { responsive: true, maintainAspectRatio: true } }); }
                     return;
                 }
 
-                const labels = data.map(d => d.timestamp);
-                const values = data.map(d => d[metric]);
+                data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-                const metricNames = {
-                    temperature: 'Температура (°C)',
-                    humidity: 'Влажность (%)',
-                    pressure: 'Давление (гПа)'
-                };
-                const metricName = metricNames[metric];
+                const { labels, values, timeSpanHours } = aggregateDataForChart(data, 150);
+
+                const metricName = getMetricLabel(currentMetric);
+                const xAxisTitle = timeSpanHours > 48 ? 'Дата' : 'Время';
 
                 if (chartInstance) {
-                    // Обновляем существующий график
                     chartInstance.data.labels = labels;
                     chartInstance.data.datasets[0].data = values;
                     chartInstance.data.datasets[0].label = `${deviceName} - ${metricName}`;
-
-                    // Обновляем границы оси Y с отступами
-                    updateChartBounds(chartInstance, values, metric);
-
+                    if (chartInstance.options.scales && chartInstance.options.scales.x) {
+                        chartInstance.options.scales.x.title.text = xAxisTitle;
+                    }
+                    if (chartInstance.options.scales && chartInstance.options.scales.y) {
+                        chartInstance.options.scales.y.title.text = metricName;
+                    }
+                    updateChartBounds(chartInstance, values, currentMetric);
                     chartInstance.update();
                 } else {
-                    // Вычисляем начальные границы
-                    let minVal = Math.min(...values);
-                    let maxVal = Math.max(...values);
-
-                    let padding;
-                    if (metric === 'temperature') {
-                        padding = Math.max(2, (maxVal - minVal) * 0.2);
-                    } else if (metric === 'humidity') {
-                        padding = Math.max(5, (maxVal - minVal) * 0.15);
-                    } else {
-                        padding = Math.max(3, (maxVal - minVal) * 0.1);
-                    }
-
-                    let yMin = minVal - padding;
-                    let yMax = maxVal + padding;
-
-                    if (metric === 'humidity') {
-                        yMin = Math.max(0, yMin);
-                        yMax = Math.min(100, yMax);
-                    }
-
-                    const finalYMin = Math.floor(yMin * 10) / 10;
-                    const finalYMax = Math.ceil(yMax * 10) / 10;
-
+                    let minVal = Math.min(...values), maxVal = Math.max(...values);
+                    let padding = currentMetric === 'temperature' ? Math.max(2, (maxVal - minVal) * 0.2) : (currentMetric === 'humidity' ? Math.max(5, (maxVal - minVal) * 0.15) : Math.max(3, (maxVal - minVal) * 0.1));
+                    let yMin = minVal - padding, yMax = maxVal + padding;
+                    if (currentMetric === 'humidity') { yMin = Math.max(0, yMin); yMax = Math.min(100, yMax); }
+                    const finalYMin = Math.floor(yMin * 10) / 10, finalYMax = Math.ceil(yMax * 10) / 10;
                     const ctx = document.getElementById('mainChart').getContext('2d');
                     chartInstance = new Chart(ctx, {
                         type: 'line',
@@ -963,29 +892,25 @@
                                 backgroundColor: 'rgba(59, 130, 246, 0.1)',
                                 tension: 0.3,
                                 fill: true,
-                                pointRadius: 2,
-                                pointHoverRadius: 5
+                                pointRadius: labels.length > 100 ? 0 : 2,
+                                pointHoverRadius: 4,
+                                spanGaps: false
                             }]
                         },
                         options: {
                             responsive: true,
                             maintainAspectRatio: true,
-                            animation: {
-                                duration: 500
-                            },
+                            animation: { duration: 500 },
                             plugins: {
                                 legend: { position: 'top' },
                                 tooltip: {
                                     mode: 'index',
                                     intersect: false,
                                     callbacks: {
-                                        label: function (context) {
-                                            let label = context.dataset.label || '';
-                                            let value = context.parsed.y;
-                                            let unit = '';
-                                            if (metric === 'temperature') unit = '°C';
-                                            else if (metric === 'humidity') unit = '%';
-                                            else unit = 'гПа';
+                                        label: (ctx) => {
+                                            let label = ctx.dataset.label || '';
+                                            let value = ctx.parsed.y;
+                                            let unit = currentMetric === 'temperature' ? '°C' : (currentMetric === 'humidity' ? '%' : 'гПа');
                                             return `${label}: ${value.toFixed(1)}${unit}`;
                                         }
                                     }
@@ -997,239 +922,60 @@
                                         maxRotation: 45,
                                         minRotation: 45,
                                         autoSkip: true,
-                                        maxTicksLimit: 8,
-                                        callback: function (val, index) {
-                                            const label = this.getLabelForValue(val);
-                                            if (label && label.length > 16) {
-                                                return label.substring(11, 16);
-                                            }
-                                            return label;
-                                        }
+                                        maxTicksLimit: 12
                                     },
-                                    title: {
-                                        display: true,
-                                        text: 'Время',
-                                        font: { size: 12 }
-                                    }
+                                    title: { display: true, text: xAxisTitle, font: { size: 12 } }
                                 },
                                 y: {
                                     min: finalYMin,
                                     max: finalYMax,
-                                    beginAtZero: metric === 'humidity' ? true : false,
-                                    title: {
-                                        display: true,
-                                        text: metricName,
-                                        font: { size: 12 }
-                                    },
-                                    ticks: {
-                                        callback: function (value) {
-                                            return value.toFixed(1);
-                                        }
-                                    },
-                                    grid: {
-                                        color: 'rgba(0, 0, 0, 0.05)'
-                                    }
+                                    beginAtZero: currentMetric === 'humidity',
+                                    title: { display: true, text: metricName, font: { size: 12 } },
+                                    ticks: { callback: value => value.toFixed(1) },
+                                    grid: { color: 'rgba(0, 0, 0, 0.05)' }
                                 }
                             },
-                            elements: {
-                                point: {
-                                    radius: 1,
-                                    hoverRadius: 4
-                                },
-                                line: {
-                                    borderWidth: 2
-                                }
-                            },
-                            interaction: {
-                                mode: 'nearest',
-                                axis: 'x',
-                                intersect: false
-                            }
+                            elements: { point: { radius: labels.length > 100 ? 0 : 1, hoverRadius: 4 }, line: { borderWidth: 2 } },
+                            interaction: { mode: 'nearest', axis: 'x', intersect: false }
                         }
                     });
                 }
-            } catch (error) {
-                console.error('Ошибка загрузки графика:', error);
-            }
+            } catch (error) { console.error('Ошибка загрузки графика:', error); }
         }
 
-        // Админ функции
-        async function checkAdminStatus() {
-            try {
-                const response = await fetch('/api/admin/check');
-                const data = await response.json();
-                isAdmin = data.authenticated;
-                if (isAdmin) {
-                    document.getElementById('loginForm').style.display = 'none';
-                    document.getElementById('adminTools').style.display = 'block';
-                    await loadDevices();
-                }
-            } catch (error) {
-                console.error('Ошибка проверки статуса:', error);
-            }
-        }
-
-        async function adminLogin() {
-            const username = document.getElementById('adminUsername').value;
-            const password = document.getElementById('adminPassword').value;
-            try {
-                const response = await fetch('/api/admin/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                if (response.ok) {
-                    isAdmin = true;
-                    document.getElementById('loginForm').style.display = 'none';
-                    document.getElementById('adminTools').style.display = 'block';
-                    await loadDevices();
-                    alert('Вход выполнен успешно!');
-                } else {
-                    alert('Неверный логин или пароль');
-                }
-            } catch (error) {
-                console.error('Ошибка входа:', error);
-                alert('Ошибка подключения к серверу');
-            }
-        }
-
-        async function adminLogout() {
-            try {
-                await fetch('/api/admin/logout', { method: 'POST' });
-                isAdmin = false;
-                document.getElementById('loginForm').style.display = 'block';
-                document.getElementById('adminTools').style.display = 'none';
-                document.getElementById('adminPanel').classList.remove('open');
-                document.getElementById('adminOverlay').classList.remove('open');
-                alert('Выход выполнен');
-            } catch (error) {
-                console.error('Ошибка выхода:', error);
-            }
-        }
-
-        async function adminDeleteDevice() {
-            const device = document.getElementById('adminDeviceSelect').value;
-            if (!device) { alert('Выберите датчик'); return; }
-            if (confirm(`Удалить все данные датчика "${device}"? Это действие необратимо!`)) {
-                try {
-                    const response = await fetch(`/api/admin/delete/device/${encodeURIComponent(device)}`, { method: 'DELETE' });
-                    if (response.ok) {
-                        alert('Данные удалены');
-                        await loadDevices();
-                        await loadGridData();
-                        if (currentDevice === device) {
-                            showGridView();
-                        }
-                    }
-                } catch (error) {
-                    console.error('Ошибка удаления:', error);
-                }
-            }
-        }
-
-        async function adminDeleteRange() {
-            const startDate = document.getElementById('adminStartDate').value;
-            const endDate = document.getElementById('adminEndDate').value;
-            const device = document.getElementById('adminRangeDeviceSelect').value;
-            if (!startDate || !endDate) { alert('Выберите период'); return; }
-            if (confirm(`Удалить данные за период с ${startDate} по ${endDate}${device ? ` для датчика "${device}"` : ' для всех датчиков'}?`)) {
-                try {
-                    const response = await fetch('/api/admin/delete/range', {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ start_date: startDate, end_date: endDate, device_name: device || null })
-                    });
-                    if (response.ok) {
-                        alert('Данные удалены');
-                        await loadDevices();
-                        await loadGridData();
-                        if (currentDevice && (device === currentDevice || !device)) {
-                            await loadLatestData(currentDevice);
-                            await loadChartData(currentDevice);
-                        }
-                    }
-                } catch (error) {
-                    console.error('Ошибка удаления:', error);
-                }
-            }
-        }
-
-        async function adminDeleteAll() {
-            if (confirm('⚠️ Удалить ВСЕ данные всех датчиков? Это действие необратимо!')) {
-                try {
-                    const response = await fetch('/api/admin/delete/all', { method: 'DELETE' });
-                    if (response.ok) {
-                        alert('Все данные удалены');
-                        await loadDevices();
-                        await loadGridData();
-                        showGridView();
-                    }
-                } catch (error) {
-                    console.error('Ошибка удаления:', error);
-                }
-            }
-        }
-
-        async function exportCSV() {
-            try {
-                const response = await fetch('/api/data/all?limit=10000');
-                const data = await response.json();
-                let csv = 'device_name,temperature,humidity,pressure,timestamp\n';
-                data.forEach(row => {
-                    csv += `"${row.device_name}",${row.temperature},${row.humidity},${row.pressure},"${row.timestamp}"\n`;
-                });
-                const blob = new Blob([csv], { type: 'text/csv' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `sensors_export_${new Date().toISOString()}.csv`;
-                a.click();
-                URL.revokeObjectURL(url);
-            } catch (error) {
-                console.error('Ошибка экспорта:', error);
-            }
-        }
+        async function checkAdminStatus() { try { const response = await fetch('/api/admin/check'); const data = await response.json(); isAdmin = data.authenticated; if (isAdmin) { document.getElementById('loginForm').style.display = 'none'; document.getElementById('adminTools').style.display = 'block'; await loadDevices(); } } catch (error) { console.error(error); } }
+        async function adminLogin() { const username = document.getElementById('adminUsername').value, password = document.getElementById('adminPassword').value; try { const response = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) }); if (response.ok) { isAdmin = true; document.getElementById('loginForm').style.display = 'none'; document.getElementById('adminTools').style.display = 'block'; await loadDevices(); alert('Вход выполнен успешно!'); } else alert('Неверный логин или пароль'); } catch (error) { alert('Ошибка подключения к серверу'); } }
+        async function adminLogout() { try { await fetch('/api/admin/logout', { method: 'POST' }); isAdmin = false; document.getElementById('loginForm').style.display = 'block'; document.getElementById('adminTools').style.display = 'none'; document.getElementById('adminPanel').classList.remove('open'); document.getElementById('adminOverlay').classList.remove('open'); alert('Выход выполнен'); } catch (error) { console.error(error); } }
+        async function adminDeleteDevice() { const device = document.getElementById('adminDeviceSelect').value; if (!device) { alert('Выберите датчик'); return; } if (confirm(`Удалить все данные датчика "${device}"?`)) { try { const response = await fetch(`/api/admin/delete/device/${encodeURIComponent(device)}`, { method: 'DELETE' }); if (response.ok) { alert('Данные удалены'); await loadDevices(); await loadGridData(); if (currentDevice === device) showGridView(); } } catch (error) { console.error(error); } } }
+        async function adminDeleteRange() { const startDate = document.getElementById('adminStartDate').value, endDate = document.getElementById('adminEndDate').value, device = document.getElementById('adminRangeDeviceSelect').value; if (!startDate || !endDate) { alert('Выберите период'); return; } if (confirm(`Удалить данные за период?`)) { try { const response = await fetch('/api/admin/delete/range', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ start_date: startDate, end_date: endDate, device_name: device || null }) }); if (response.ok) { alert('Данные удалены'); await loadDevices(); await loadGridData(); if (currentDevice && (device === currentDevice || !device)) { loadLatestData(currentDevice); loadChartData(currentDevice); } } } catch (error) { console.error(error); } } }
+        async function adminDeleteAll() { if (confirm('⚠️ Удалить ВСЕ данные?')) { try { const response = await fetch('/api/admin/delete/all', { method: 'DELETE' }); if (response.ok) { alert('Все данные удалены'); await loadDevices(); await loadGridData(); showGridView(); } } catch (error) { console.error(error); } } }
 
         function toggleCustomDateRange() {
             const periodPreset = document.getElementById('periodPreset').value;
             const customRange = document.getElementById('customDateRange');
-            customRange.style.display = periodPreset === 'custom' ? 'flex' : 'none';
+            if (periodPreset === 'custom') {
+                customRange.style.display = 'flex';
+                setDefaultCustomRange();
+            } else {
+                customRange.style.display = 'none';
+            }
+            if (viewMode === 'detail' && currentDevice) {
+                checkAndStartLiveMode();
+                loadChartData(currentDevice);
+            }
         }
 
-        // Автообновление
-        function startAutoUpdate() {
-            if (updateInterval) clearInterval(updateInterval);
-            updateInterval = setInterval(async () => {
-                await loadDevices();
-                if (viewMode === 'grid') {
-                    await loadGridData();
-                } else if (currentDevice) {
-                    await loadLatestData(currentDevice);
-                }
-            }, 3000);
-        }
+        function startAutoUpdate() { if (updateInterval) clearInterval(updateInterval); updateInterval = setInterval(async () => { await loadDevices(); if (viewMode === 'grid') await loadGridData(); else if (currentDevice && !isLiveMode) await loadLatestData(currentDevice); }, 3000); }
 
-        // Админ панель UI
-        function openAdminPanel() {
-            document.getElementById('adminPanel').classList.add('open');
-            document.getElementById('adminOverlay').classList.add('open');
-            checkAdminStatus();
-        }
+        function openAdminPanel() { document.getElementById('adminPanel').classList.add('open'); document.getElementById('adminOverlay').classList.add('open'); checkAdminStatus(); }
+        function closeAdminPanel() { document.getElementById('adminPanel').classList.remove('open'); document.getElementById('adminOverlay').classList.remove('open'); }
 
-        function closeAdminPanel() {
-            document.getElementById('adminPanel').classList.remove('open');
-            document.getElementById('adminOverlay').classList.remove('open');
-        }
-
-        // Инициализация
-        document.getElementById('backToGridBtn').onclick = showGridView;
+        document.getElementById('backToGridBtn').onclick = () => { stopLiveChartUpdates(); showGridView(); };
         document.getElementById('refreshChartBtn').onclick = () => { if (currentDevice) loadChartData(currentDevice); };
         document.getElementById('refreshSensorsBtn').onclick = () => { loadDevices(); loadGridData(); };
-        document.getElementById('exportCSVBtn').onclick = exportCSV;
         document.getElementById('metricType').onchange = () => { if (currentDevice) loadChartData(currentDevice); };
         document.getElementById('periodPreset').onchange = toggleCustomDateRange;
-        document.getElementById('applyCustomRange').onclick = () => { if (currentDevice) loadChartData(currentDevice); };
-
+        document.getElementById('applyCustomRange').onclick = () => { if (currentDevice) { stopLiveChartUpdates(); loadChartData(currentDevice); } };
         document.getElementById('openAdminBtn').onclick = openAdminPanel;
         document.getElementById('closeAdminBtn').onclick = closeAdminPanel;
         document.getElementById('adminOverlay').onclick = closeAdminPanel;
@@ -1239,7 +985,6 @@
         document.getElementById('adminDeleteRangeBtn').onclick = adminDeleteRange;
         document.getElementById('adminDeleteAllBtn').onclick = adminDeleteAll;
 
-        // Запуск
         toggleCustomDateRange();
         loadDevices();
         loadGridData();
