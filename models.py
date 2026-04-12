@@ -28,6 +28,22 @@ class SensorData(db.Model):
         }
 
 
+class DeviceAlias(db.Model):
+    __tablename__ = "device_alias"
+    id = db.Column(db.Integer, primary_key=True)
+    device_name = db.Column(db.String(50), nullable=False, unique=True)  # оригинальное имя
+    display_name = db.Column(db.String(50), nullable=False)  # отображаемое имя
+    created_at = db.Column(db.DateTime, default=utc_plus_4_now)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "device_name": self.device_name,
+            "display_name": self.display_name,
+            "created_at": self.created_at.strftime('%Y-%m-%d %H:%M:%S') if self.created_at else None,
+        }
+
+
 class DeviceOrder(db.Model):
     __tablename__ = "device_order"
     id = db.Column(db.Integer, primary_key=True)

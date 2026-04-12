@@ -102,11 +102,20 @@ function sortDevices(devices, location = 'list') {
     }
     const sorted = [];
     order.forEach(name => {
-        const device = devices.find(d => d === name);
+        const device = devices.find(d => {
+            const deviceName = typeof d === 'string' ? d : d.device_name;
+            return deviceName === name;
+        });
         if (device) sorted.push(device);
     });
     devices.forEach(d => {
-        if (!sorted.includes(d)) sorted.push(d);
+        if (!sorted.find(s => {
+            const sName = typeof s === 'string' ? s : s.device_name;
+            const dName = typeof d === 'string' ? d : d.device_name;
+            return sName === dName;
+        })) {
+            sorted.push(d);
+        }
     });
     console.log(`Final sorted order for ${location}:`, sorted);
     return sorted;
@@ -115,6 +124,14 @@ function sortDevices(devices, location = 'list') {
 function updateAdminDeviceLists(devices) {
     const deviceSelect = document.getElementById('adminDeviceSelect');
     const rangeDeviceSelect = document.getElementById('adminRangeDeviceSelect');
-    if (deviceSelect) deviceSelect.innerHTML = devices.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
-    if (rangeDeviceSelect) rangeDeviceSelect.innerHTML = '<option value="">Все датчики</option>' + devices.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+    const renameDeviceSelect = document.getElementById('adminRenameDeviceSelect');
+    
+    const options = devices.map(d => {
+        const deviceName = typeof d === 'string' ? d : d.device_name;
+        return `<option value="${escapeHtml(deviceName)}">${escapeHtml(deviceName)}</option>`;
+    }).join('');
+    
+    if (deviceSelect) deviceSelect.innerHTML = options;
+    if (rangeDeviceSelect) rangeDeviceSelect.innerHTML = '<option value="">Все датчики</option>' + options;
+    if (renameDeviceSelect) renameDeviceSelect.innerHTML = options;
 }

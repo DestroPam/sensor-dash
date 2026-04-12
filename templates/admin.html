@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ панель | Умный мониторинг</title>
+    <link rel="stylesheet" href="/static/styles/main.css">
+</head>
+
+<body>
+    <!-- Top Navigation Bar -->
+    <div class="navbar">
+        <div class="navbar-container">
+            <span class="navbar-title">🔐 Админ панель</span>
+            <div class="navbar-buttons">
+                <button id="navBackBtn" class="nav-button" style="background: #64748b;">⬅️ Назад</button>
+                <button id="navLogoutBtn" class="nav-button" style="background: #ef4444;">🚪 Выход</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-page">
+        <div id="loginForm" class="admin-login-form">
+            <div class="admin-login-container">
+                <h2>Вход в админ панель</h2>
+                <p style="color: #64748b; margin-bottom: 20px;">Введите учетные данные администратора</p>
+                <input type="text" id="adminUsername" placeholder="Логин" class="admin-input">
+                <input type="password" id="adminPassword" placeholder="Пароль" class="admin-input">
+                <button id="adminLoginBtn" class="admin-btn">Войти в админ панель</button>
+            </div>
+        </div>
+
+        <div id="adminTools" class="admin-tools" style="display: none;">
+            <div class="admin-sections">
+                <!-- Data Management Section -->
+                <section class="admin-section">
+                    <h3>🛠️ Управление данными</h3>
+                    
+                    <div class="admin-subsection">
+                        <h4>📋 Удалить данные датчика</h4>
+                        <select id="adminDeviceSelect" class="admin-select"></select>
+                        <button id="adminDeleteDeviceBtn" class="admin-btn danger">🗑️ Удалить данные</button>
+                    </div>
+
+                    <div class="admin-subsection">
+                        <h4>📅 Удалить данные за период</h4>
+                        <select id="adminRangeDeviceSelect" class="admin-select">
+                            <option value="">Все датчики</option>
+                        </select>
+                        <div class="admin-date-range">
+                            <input type="datetime-local" id="adminStartDate" class="admin-input">
+                            <input type="datetime-local" id="adminEndDate" class="admin-input">
+                        </div>
+                        <button id="adminDeleteRangeBtn" class="admin-btn warning">🗑️ Удалить за период</button>
+                    </div>
+
+                    <div class="admin-subsection">
+                        <h4>⚠️ Удалить ВСЕ данные</h4>
+                        <p style="color: #ef4444; font-size: 0.9rem; margin-bottom: 10px;">Это действие необратимо!</p>
+                        <button id="adminDeleteAllBtn" class="admin-btn danger">⚠️ Удалить все данные</button>
+                    </div>
+                </section>
+
+                <!-- Rename Section -->
+                <section class="admin-section">
+                    <h3>✏️ Переименование датчиков</h3>
+                    <div class="admin-subsection">
+                        <h4>Изменить отображаемое имя датчика</h4>
+                        <select id="adminRenameDeviceSelect" class="admin-select"></select>
+                        <input type="text" id="adminRenameInput" placeholder="Новое имя датчика" class="admin-input">
+                        <button id="adminRenameBtn" class="admin-btn">✏️ Переименовать</button>
+                    </div>
+                </section>
+
+                <!-- Statistics Section -->
+                <section class="admin-section">
+                    <h3>📊 Статистика</h3>
+                    <div class="admin-stats">
+                        <div class="stat-card">
+                            <span class="stat-label">Активные датчики:</span>
+                            <span class="stat-value" id="activeSensorsCount">--</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">Всего записей:</span>
+                            <span class="stat-value" id="totalRecordsCount">--</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/admin.js"></script>
+</body>
+
+</html>

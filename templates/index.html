@@ -10,6 +10,17 @@
 </head>
 
 <body>
+    <!-- Top Navigation Bar -->
+    <div class="navbar">
+        <div class="navbar-container">
+            <span class="navbar-title">📊 Датчики</span>
+            <div class="navbar-buttons">
+                <button id="navLoginBtn" class="nav-button">🔓 Вход</button>
+                <button id="navAdminBtn" class="nav-button" style="display: none; background: #8b5cf6;">🔐 Админ панель</button>
+                <button id="navLogoutBtn" class="nav-button" style="display: none; background: #64748b;">🚪 Выход</button>
+            </div>
+        </div>
+    </div>
 
     <div class="dashboard">
         <div class="sensors-panel">
@@ -19,8 +30,6 @@
                 <div style="text-align: center; padding: 20px; color: #94a3b8;">Загрузка...</div>
             </div>
             <button id="refreshSensorsBtn" style="margin-top: 12px; width:100%;">🔄 Обновить список</button>
-            <button id="openAdminBtn" style="margin-top: 12px; width:100%; background: #8b5cf6;">🔐 Админ
-                панель</button>
         </div>
 
         <div class="main-panel">
@@ -88,64 +97,11 @@
         </div>
     </div>
 
-    <div id="adminOverlay" class="admin-overlay"></div>
-    <div id="adminPanel" class="admin-panel">
-        <div class="admin-header">
-            <h2>🔐 Админ панель</h2>
-            <button id="closeAdminBtn" style="background: #64748b;">✖️</button>
-        </div>
-
-        <div id="adminContent">
-            <div id="loginForm" class="login-form">
-                <h3>Вход в админ панель</h3>
-                <input type="text" id="adminUsername" placeholder="Логин" style="width: 100%; margin-bottom: 10px;">
-                <input type="password" id="adminPassword" placeholder="Пароль"
-                    style="width: 100%; margin-bottom: 10px;">
-                <button id="adminLoginBtn" style="width: 100%;">Войти</button>
-            </div>
-
-            <div id="adminTools" style="display: none;">
-                <h3>🛠️ Управление данными</h3>
-                <div style="background: #fee2e2; padding: 15px; border-radius: 12px; margin: 15px 0;">
-                    <h4>⚠️ Опасные операции</h4>
-                    <p style="font-size: 12px; color: #991b1b;">Эти действия необратимы!</p>
-                </div>
-
-                <h4>Удалить данные датчика</h4>
-                <select id="adminDeviceSelect" style="width: 100%; margin-bottom: 10px;"></select>
-                <button id="adminDeleteDeviceBtn" class="danger" style="width: 100%;">🗑️ Удалить данные выбранного
-                    датчика</button>
-
-                <hr>
-
-                <h4>Удалить данные за период</h4>
-                <select id="adminRangeDeviceSelect" style="width: 100%; margin-bottom: 10px;">
-                    <option value="">Все датчики</option>
-                </select>
-                <div class="date-range">
-                    <input type="datetime-local" id="adminStartDate">
-                    <input type="datetime-local" id="adminEndDate">
-                </div>
-                <button id="adminDeleteRangeBtn" class="warning" style="width: 100%;">🗑️ Удалить данные за
-                    период</button>
-
-                <hr>
-
-                <button id="adminDeleteAllBtn" class="danger" style="width: 100%;">⚠️ Удалить ВСЕ данные</button>
-
-                <hr>
-
-                <button id="adminLogoutBtn" style="width: 100%; background: #64748b;">🚪 Выйти</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Подключаем все JavaScript файлы -->
     <script src="/static/js/utils.js"></script>
     <script src="/static/js/api.js"></script>
     <script src="/static/js/dragdrop.js"></script>
     <script src="/static/js/chart.js"></script>
-    <script src="/static/js/admin.js"></script>
     <script src="/static/js/app.js"></script>
 
 </body>

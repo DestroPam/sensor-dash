@@ -9,7 +9,7 @@ from flask import (
 )
 from flask_cors import CORS
 from config import Config
-from models import db, SensorData, DeviceOrder
+from models import db, SensorData, DeviceOrder, DeviceAlias
 from datetime import datetime, timedelta
 from functools import wraps
 import json
@@ -27,6 +27,21 @@ with app.app_context():
 # Админские учетные данные
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin"
+
+
+def get_display_name(device_name):
+    """Получить отображаемое имя датчика или оригинальное имя если алиаса нет"""
+    alias = DeviceAlias.query.filter_by(device_name=device_name).first()
+    return alias.display_name if alias else device_name
+
+
+def sensor_to_dict_with_display(sensor_obj):
+    """Преобразовать SensorData в словарь с display_name (сохраняя оригинальное device_name)"""
+    result = sensor_obj.to_dict()
+    display_name = get_display_name(result['device_name'])
+    # Добавляем display_name, но оригинальное device_name остается для запросов
+    result['display_name'] = display_name
+    return result
 
 
 def login_required(f):
@@ -83,7 +98,7 @@ def get_latest_data():
             .first()
         )
         if latest:
-            result.append(latest.to_dict())
+            result.append(sensor_to_dict_with_display(latest))
 
     return jsonify(result)
 
@@ -119,7 +134,7 @@ def get_device_data(device_name):
         query = query.order_by(SensorData.timestamp.asc())
 
     data = query.limit(limit).all()
-    return jsonify([d.to_dict() for d in data])
+    return jsonify([sensor_to_dict_with_display(d) for d in data])
 
 
 @app.route("/api/data/all", methods=["GET"])
@@ -133,14 +148,25 @@ def get_all_data():
         .limit(limit)
         .all()
     )
-    return jsonify([d.to_dict() for d in data])
+    return jsonify([sensor_to_dict_with_display(d) for d in data])
 
 
 @app.route("/api/devices", methods=["GET"])
 def get_devices():
-    """Возвращает список всех устройств"""
+    """Возвращает список всех устройств с отображаемыми именами и оригинальными"""
     devices = db.session.query(SensorData.device_name).distinct().all()
-    return jsonify([d[0] for d in devices])
+    devices = [d[0] for d in devices]
+    
+    # Возвращаем оба имени для каждого устройства
+    result = []
+    for device in devices:
+        display_name = get_display_name(device)
+        result.append({
+            "device_name": device,
+            "display_name": display_name
+        })
+    
+    return jsonify(result)
 
 
 @app.route("/api/data/range", methods=["GET"])
@@ -235,9 +261,59 @@ def admin_delete_range():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/admin/rename/device", methods=["POST"])
+@login_required
+def admin_rename_device():
+    """Переименовать датчик"""
+    data = request.get_json()
+    device_name = data.get("device_name")
+    display_name = data.get("display_name")
+    
+    if not device_name or not display_name:
+        return jsonify({"error": "Missing device_name or display_name"}), 400
+    
+    # Проверяем что датчик существует
+    existing = SensorData.query.filter_by(device_name=device_name).first()
+    if not existing:
+        return jsonify({"error": "Device not found"}), 404
+    
+    # Очищаем новое имя
+    display_name = display_name.strip()
+    if not display_name:
+        return jsonify({"error": "Display name cannot be empty"}), 400
+    
+    try:
+        # Ищем существующий алиас
+        alias = DeviceAlias.query.filter_by(device_name=device_name).first()
+        if alias:
+            alias.display_name = display_name
+        else:
+            alias = DeviceAlias(device_name=device_name, display_name=display_name)
+            db.session.add(alias)
+        
+        db.session.commit()
+        return jsonify({"status": "success", "device_name": device_name, "display_name": display_name}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/admin/aliases", methods=["GET"])
+@login_required
+def admin_get_aliases():
+    """Получить все алиасы датчиков"""
+    aliases = DeviceAlias.query.all()
+    return jsonify([alias.to_dict() for alias in aliases]), 200
+
+
 @app.route("/")
 def index():
     return render_template('index.html')
+
+
+@app.route("/admin")
+def admin():
+    return render_template('admin.html')
 
 
 @app.route("/api/data/count", methods=["GET"])

@@ -14,6 +14,30 @@ let listDeviceOrder = [];
 let gridDeviceOrder = [];
 let isDragging = false;
 
+async function updateNavbarButtons() {
+    try {
+        const response = await fetch('/api/admin/check');
+        const data = await response.json();
+        isAdmin = data.authenticated;
+        
+        const navLoginBtn = document.getElementById('navLoginBtn');
+        const navAdminBtn = document.getElementById('navAdminBtn');
+        const navLogoutBtn = document.getElementById('navLogoutBtn');
+        
+        if (isAdmin) {
+            navLoginBtn.style.display = 'none';
+            navAdminBtn.style.display = 'inline-block';
+            navLogoutBtn.style.display = 'inline-block';
+        } else {
+            navLoginBtn.style.display = 'inline-block';
+            navAdminBtn.style.display = 'none';
+            navLogoutBtn.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Ошибка проверки статуса админа:', error);
+    }
+}
+
 function showGridView() {
     viewMode = 'grid';
     stopLiveChartUpdates();
@@ -36,11 +60,40 @@ function showDetailView(deviceName) {
 
 function startAutoUpdate() {
     if (updateInterval) clearInterval(updateInterval);
+    console.log('⏱️ Запуск интервала автообновления (каждые 3 секунды)');
+    
+    // Первое обновление нужно сделать сразу
+    (async () => {
+        console.log('📍 Первое обновление...');
+        try {
+            await updateNavbarButtons();
+            await loadDevices();
+            if (viewMode === 'grid') {
+                await loadGridData();
+            } else if (currentDevice && !isLiveMode) {
+                await loadLatestData(currentDevice);
+            }
+            console.log('✅ Первое обновление завершено');
+        } catch (error) {
+            console.error('❌ Ошибка первого обновления:', error);
+        }
+    })();
+    
+    // Затем настраиваем интервал для повторных обновлений
     updateInterval = setInterval(async () => {
         if (!isDragging) {
-            await loadDevices();
-            if (viewMode === 'grid') await loadGridData();
-            else if (currentDevice && !isLiveMode) await loadLatestData(currentDevice);
+            try {
+                await updateNavbarButtons();
+                await loadDevices();
+                if (viewMode === 'grid') {
+                    await loadGridData();
+                } else if (currentDevice && !isLiveMode) {
+                    await loadLatestData(currentDevice);
+                }
+                console.log('🔄 Автообновление завершено');
+            } catch (error) {
+                console.error('❌ Ошибка автообновления:', error);
+            }
         }
     }, 3000);
 }
@@ -68,23 +121,70 @@ function setupEventListeners() {
             loadChartData(currentDevice);
         }
     };
-    document.getElementById('openAdminBtn').onclick = openAdminPanel;
-    document.getElementById('closeAdminBtn').onclick = closeAdminPanel;
-    document.getElementById('adminOverlay').onclick = closeAdminPanel;
-    document.getElementById('adminLoginBtn').onclick = adminLogin;
-    document.getElementById('adminLogoutBtn').onclick = adminLogout;
-    document.getElementById('adminDeleteDeviceBtn').onclick = adminDeleteDevice;
-    document.getElementById('adminDeleteRangeBtn').onclick = adminDeleteRange;
-    document.getElementById('adminDeleteAllBtn').onclick = adminDeleteAll;
+    
+    // Navbar buttons
+    document.getElementById('navLoginBtn').onclick = () => {
+        window.location.href = '/admin';
+    };
+    document.getElementById('navAdminBtn').onclick = () => {
+        window.location.href = '/admin';
+    };
+    document.getElementById('navLogoutBtn').onclick = adminLogout;
 }
 
 // Инициализация приложения
-document.addEventListener('DOMContentLoaded', () => {
-    setupEventListeners();
-    toggleCustomDateRange();
-    loadDeviceOrder().then(() => {
-        loadDevices();
-        loadGridData();
-        startAutoUpdate();
-    });
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 Инициализация приложения');
+    
+    try {
+        setupEventListeners();
+        console.log('✅ Обработчики событий установлены');
+    } catch (error) {
+        console.error('❌ Ошибка установки обработчиков:', error);
+    }
+    
+    try {
+        toggleCustomDateRange();
+        console.log('✅ Переключение диапазона дат готово');
+    } catch (error) {
+        console.error('❌ Ошибка переключения диапазона:', error);
+    }
+    
+    try {
+        await updateNavbarButtons();
+        console.log('✅ Статус админа проверен');
+    } catch (error) {
+        console.error('❌ Ошибка проверки статуса админа:', error);
+    }
+    
+    // Загружаем порядок датчиков, но продолжаем даже если ошибка
+    try {
+        await loadDeviceOrder();
+        console.log('✅ Порядок датчиков загружен');
+    } catch (error) {
+        console.error('❌ Ошибка загрузки порядка датчиков (продолжаем):', error);
+    }
+    
+    // Загружаем данные с таймаутом
+    try {
+        const devicesPromise = loadDevices();
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout loading devices')), 5000));
+        await Promise.race([devicesPromise, timeout]);
+        console.log('✅ Список датчиков загружен');
+    } catch (error) {
+        console.error('❌ Ошибка загрузки датчиков (продолжаем):', error);
+    }
+    
+    try {
+        const gridPromise = loadGridData();
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout loading grid')), 5000));
+        await Promise.race([gridPromise, timeout]);
+        console.log('✅ Сетка датчиков отрисована');
+    } catch (error) {
+        console.error('❌ Ошибка отрисовки сетки (продолжаем):', error);
+    }
+    
+    // Запускаем автообновление ВСЕ РАВНО, даже если была ошибка
+    startAutoUpdate();
+    console.log('✅ Приложение готово к работе');
 });
