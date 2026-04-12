@@ -2,14 +2,14 @@ from flask import (
     Flask,
     jsonify,
     request,
-    render_template_string,
+    render_template,
     session,
     redirect,
     url_for,
 )
 from flask_cors import CORS
 from config import Config
-from models import db, SensorData
+from models import db, SensorData, DeviceOrder
 from datetime import datetime, timedelta
 from functools import wraps
 import json
@@ -41,13 +41,6 @@ def login_required(f):
     return decorated_function
 
 
-def load_html_template():
-    """Загружает HTML шаблон из файла index.html"""
-    try:
-        with open("index.html", "r", encoding="utf-8") as f:
-            return f.read()
-    except FileNotFoundError:
-        return "<h1>Сервер работает</h1><p>Файл index.html не найден.</p>"
 
 
 # --- API endpoints ---
@@ -244,7 +237,7 @@ def admin_delete_range():
 
 @app.route("/")
 def index():
-    return render_template_string(load_html_template())
+    return render_template('index.html')
 
 
 @app.route("/api/data/count", methods=["GET"])
@@ -252,6 +245,46 @@ def get_data_count():
     """Возвращает общее количество записей в БД"""
     count = SensorData.query.count()
     return jsonify({"count": count}), 200
+
+
+# --- API endpoints для порядка датчиков ---
+@app.route("/api/device-order/<location>", methods=["GET"])
+def get_device_order(location):
+    """Возвращает сохраненный порядок датчиков для конкретной области (list или grid)"""
+    if location not in ['list', 'grid']:
+        return jsonify({"error": "Invalid location"}), 400
+
+    order = DeviceOrder.query.filter_by(location=location).first()
+    if order:
+        return jsonify(json.loads(order.device_order)), 200
+    return jsonify([]), 200
+
+
+@app.route("/api/device-order/<location>", methods=["POST"])
+def save_device_order(location):
+    """Сохраняет новый порядок датчиков для конкретной области (list или grid)"""
+    if location not in ['list', 'grid']:
+        return jsonify({"error": "Invalid location"}), 400
+
+    data = request.get_json()
+    device_list = data.get("device_order", [])
+
+    # Удаляем дубликаты
+    device_list = list(dict.fromkeys(device_list))
+
+    try:
+        order = DeviceOrder.query.filter_by(location=location).first()
+        if order:
+            order.device_order = json.dumps(device_list)
+        else:
+            order = DeviceOrder(location=location, device_order=json.dumps(device_list))
+            db.session.add(order)
+
+        db.session.commit()
+        return jsonify({"status": "success", "device_order": device_list}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":

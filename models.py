@@ -26,3 +26,18 @@ class SensorData(db.Model):
             "pressure": self.pressure,
             "timestamp": self.timestamp.strftime('%Y-%m-%d %H:%M:%S') if self.timestamp else None,
         }
+
+
+class DeviceOrder(db.Model):
+    __tablename__ = "device_order"
+    id = db.Column(db.Integer, primary_key=True)
+    location = db.Column(db.String(50), nullable=False, unique=True)  # 'list' или 'grid'
+    device_order = db.Column(db.Text, nullable=False, default="[]")
+
+    def to_dict(self):
+        import json
+        return {
+            "id": self.id,
+            "location": self.location,
+            "device_order": json.loads(self.device_order)
+        }
