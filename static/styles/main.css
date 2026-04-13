@@ -542,7 +542,12 @@ hr {
 
 .admin-sections {
     display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 30px;
+}
+
+.admin-stats-section {
+    margin-top: 30px;
 }
 
 .admin-section {
@@ -657,6 +662,10 @@ hr {
     .admin-login-container {
         padding: 30px 20px;
         border-radius: 20px;
+    }
+
+    .admin-sections {
+        grid-template-columns: 1fr;
     }
 
     .admin-section {
