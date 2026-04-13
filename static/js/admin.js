@@ -7,10 +7,9 @@ let isAdmin = false;
 function updateAdminDeviceLists(deviceNames) {
     const selects = [
         'adminDeviceSelect',
-        'adminRangeDeviceSelect',
-        'adminRenameDeviceSelect'
+        'adminRangeDeviceSelect'
     ];
-    
+
     selects.forEach(selectId => {
         const select = document.getElementById(selectId);
         if (select) {
@@ -45,7 +44,7 @@ async function checkAdminStatus() {
         const response = await fetch('/api/admin/check');
         const data = await response.json();
         isAdmin = data.authenticated;
-        
+
         if (isAdminPage) {
             // На странице админ-панели
             if (!isAdmin) {
@@ -80,12 +79,12 @@ async function adminLogin() {
             document.getElementById('adminTools').style.display = 'block';
             await loadDevices();
             await loadStatistics();
-            alert('Вход выполнен успешно!');
+            console.log('✅ Вход выполнен успешно!');
         } else {
-            alert('Неверный логин или пароль');
+            console.error('❌ Неверный логин или пароль');
         }
     } catch (error) {
-        alert('Ошибка подключения к серверу');
+        console.error('❌ Ошибка подключения к серверу');
     }
 }
 
@@ -100,7 +99,7 @@ async function adminLogout() {
             document.getElementById('adminTools').style.display = 'none';
             document.getElementById('adminUsername').value = '';
             document.getElementById('adminPassword').value = '';
-            alert('Выход выполнен');
+            console.log('✅ Выход выполнен');
         } else {
             window.location.reload();
         }
@@ -112,22 +111,20 @@ async function adminLogout() {
 async function adminDeleteDevice() {
     const device = document.getElementById('adminDeviceSelect').value;
     if (!device) {
-        alert('Выберите датчик');
+        console.error('❌ Выберите датчик');
         return;
     }
-    if (confirm(`Удалить все данные датчика "${device}"?`)) {
-        try {
-            const response = await fetch(`/api/admin/delete/device/${encodeURIComponent(device)}`, {
-                method: 'DELETE'
-            });
-            if (response.ok) {
-                alert('Данные удалены');
-                await loadDevices();
-                await loadStatistics();
-            }
-        } catch (error) {
-            console.error(error);
+    try {
+        const response = await fetch(`/api/admin/delete/device/${encodeURIComponent(device)}`, {
+            method: 'DELETE'
+        });
+        if (response.ok) {
+            console.log('✅ Данные удалены');
+            await loadDevices();
+            await loadStatistics();
         }
+    } catch (error) {
+        console.error(error);
     }
 }
 
@@ -136,82 +133,36 @@ async function adminDeleteRange() {
     const endDate = document.getElementById('adminEndDate').value;
     const device = document.getElementById('adminRangeDeviceSelect').value;
     if (!startDate || !endDate) {
-        alert('Выберите период');
+        console.error('❌ Выберите период');
         return;
     }
-    if (confirm(`Удалить данные за период?`)) {
-        try {
-            const response = await fetch('/api/admin/delete/range', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ start_date: startDate, end_date: endDate, device_name: device || null })
-            });
-            if (response.ok) {
-                alert('Данные удалены');
-                await loadDevices();
-                await loadStatistics();
-            }
-        } catch (error) {
-            console.error(error);
+    try {
+        const response = await fetch('/api/admin/delete/range', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ start_date: startDate, end_date: endDate, device_name: device || null })
+        });
+        if (response.ok) {
+            console.log('✅ Данные удалены');
+            await loadDevices();
+            await loadStatistics();
         }
+    } catch (error) {
+        console.error(error);
     }
 }
 
 async function adminDeleteAll() {
-    if (confirm('⚠️ Удалить ВСЕ данные?')) {
-        try {
-            const response = await fetch('/api/admin/delete/all', {
-                method: 'DELETE'
-            });
-            if (response.ok) {
-                alert('Все данные удалены');
-                await loadDevices();
-                await loadStatistics();
-            }
-        } catch (error) {
-            console.error(error);
-        }
-    }
-}
-
-async function adminRenameDevice() {
-    const deviceSelect = document.getElementById('adminRenameDeviceSelect');
-    const newNameInput = document.getElementById('adminRenameInput');
-    const deviceName = deviceSelect.value;
-    const displayName = newNameInput.value.trim();
-    
-    if (!deviceName) {
-        alert('Выберите датчик');
-        return;
-    }
-    
-    if (!displayName) {
-        alert('Введите новое имя');
-        return;
-    }
-    
     try {
-        const response = await fetch('/api/admin/rename/device', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                device_name: deviceName,
-                display_name: displayName
-            })
+        const response = await fetch('/api/admin/delete/all', {
+            method: 'DELETE'
         });
-        
         if (response.ok) {
-            const data = await response.json();
-            alert(`Датчик переименован: "${deviceName}" → "${displayName}"`);
-            newNameInput.value = '';
+            console.log('✅ Все данные удалены');
             await loadDevices();
             await loadStatistics();
-        } else {
-            const error = await response.json();
-            alert(`Ошибка: ${error.error || 'Неизвестная ошибка'}`);
         }
     } catch (error) {
-        alert('Ошибка подключения к серверу');
         console.error(error);
     }
 }
@@ -221,14 +172,14 @@ async function loadStatistics() {
         // Получаем количество активных датчиков
         const devicesResponse = await fetch('/api/devices');
         const devicesData = await devicesResponse.json();
-        
+
         // Получаем общее количество записей
         const countResponse = await fetch('/api/data/count');
         const countData = await countResponse.json();
-        
+
         const activeSensorsEl = document.getElementById('activeSensorsCount');
         const totalRecordsEl = document.getElementById('totalRecordsCount');
-        
+
         if (activeSensorsEl) activeSensorsEl.textContent = devicesData.length;
         if (totalRecordsEl) totalRecordsEl.textContent = countData.count;
     } catch (error) {
@@ -236,11 +187,71 @@ async function loadStatistics() {
     }
 }
 
+async function adminExportData() {
+    try {
+        const response = await fetch('/api/admin/export');
+        if (!response.ok) {
+            console.error('❌ Ошибка экспорта');
+            return;
+        }
+
+        const data = await response.json();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `sensor_backup_${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        console.log('✅ Экспорт завершён:', data.sensor_data.length, 'записей,', data.aliases.length, 'имён');
+    } catch (error) {
+        console.error('❌ Ошибка экспорта:', error);
+    }
+}
+
+async function adminImportData() {
+    const fileInput = document.getElementById('adminImportFile');
+    const file = fileInput.files[0];
+
+    if (!file) {
+        console.error('❌ Выберите файл');
+        return;
+    }
+
+    try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+
+        const response = await fetch('/api/admin/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log(`✅ Импорт завершён: ${result.imported_data} записей, ${result.imported_aliases} имён`);
+            fileInput.value = '';
+            await loadDevices();
+            await loadStatistics();
+        } else {
+            const error = await response.json();
+            console.error(`❌ Ошибка импорта: ${error.error || 'Неизвестная ошибка'}`);
+        }
+    } catch (error) {
+        console.error('❌ Ошибка чтения файла:', error);
+    }
+}
+
 // Инициализация если это страница администратора
 if (isAdminPage) {
     document.addEventListener('DOMContentLoaded', () => {
         checkAdminStatus();
-        
+
         // Навигация
         const navBackBtn = document.getElementById('navBackBtn');
         const navLogoutBtn = document.getElementById('navLogoutBtn');
@@ -248,16 +259,18 @@ if (isAdminPage) {
         const adminDeleteDeviceBtn = document.getElementById('adminDeleteDeviceBtn');
         const adminDeleteRangeBtn = document.getElementById('adminDeleteRangeBtn');
         const adminDeleteAllBtn = document.getElementById('adminDeleteAllBtn');
-        const adminRenameBtn = document.getElementById('adminRenameBtn');
-        
+        const adminExportBtn = document.getElementById('adminExportBtn');
+        const adminImportBtn = document.getElementById('adminImportBtn');
+
         if (navBackBtn) navBackBtn.onclick = () => window.history.back();
         if (navLogoutBtn) navLogoutBtn.onclick = adminLogout;
         if (adminLoginBtn) adminLoginBtn.onclick = adminLogin;
         if (adminDeleteDeviceBtn) adminDeleteDeviceBtn.onclick = adminDeleteDevice;
         if (adminDeleteRangeBtn) adminDeleteRangeBtn.onclick = adminDeleteRange;
         if (adminDeleteAllBtn) adminDeleteAllBtn.onclick = adminDeleteAll;
-        if (adminRenameBtn) adminRenameBtn.onclick = adminRenameDevice;
-        
+        if (adminExportBtn) adminExportBtn.onclick = adminExportData;
+        if (adminImportBtn) adminImportBtn.onclick = adminImportData;
+
         // Позволяем нажать Enter в полях ввода
         document.getElementById('adminUsername').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') adminLogin();

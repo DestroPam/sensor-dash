@@ -15,16 +15,16 @@ function loadDeviceOrder() {
         ]),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Device order timeout')), 3000))
     ])
-    .then(([listOrder, gridOrder]) => {
-        listDeviceOrder = listOrder || [];
-        gridDeviceOrder = gridOrder || [];
-        console.log('✅ Порядок загружен - List:', listDeviceOrder.length, 'Grid:', gridDeviceOrder.length);
-    })
-    .catch(err => {
-        console.error('⚠️ Ошибка загрузки порядка (используем стандартный):', err);
-        listDeviceOrder = [];
-        gridDeviceOrder = [];
-    });
+        .then(([listOrder, gridOrder]) => {
+            listDeviceOrder = listOrder || [];
+            gridDeviceOrder = gridOrder || [];
+            console.log('✅ Порядок загружен - List:', listDeviceOrder.length, 'Grid:', gridDeviceOrder.length);
+        })
+        .catch(err => {
+            console.error('⚠️ Ошибка загрузки порядка (используем стандартный):', err);
+            listDeviceOrder = [];
+            gridDeviceOrder = [];
+        });
 }
 
 function saveDeviceOrder(items, location) {
@@ -49,9 +49,9 @@ function saveDeviceOrder(items, location) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ device_order: uniqueOrder })
     })
-    .then(res => res.json())
-    .then(data => console.log(`${location} order saved:`, data))
-    .catch(err => console.error('Error saving device order:', err));
+        .then(res => res.json())
+        .then(data => console.log(`${location} order saved:`, data))
+        .catch(err => console.error('Error saving device order:', err));
 }
 
 async function loadGridData() {
@@ -59,30 +59,30 @@ async function loadGridData() {
         console.log('📊 Загрузка сетки датчиков...');
         const devicesResponse = await fetch('/api/devices');
         if (!devicesResponse.ok) throw new Error(`API error: ${devicesResponse.status}`);
-        
+
         const devicesData = await devicesResponse.json();
         console.log('✅ Список устройств загружен:', devicesData.length);
-        
+
         // Преобразуем в объекты с device_name и display_name
         let devices = devicesData;
         if (devices.length > 0 && typeof devices[0] === 'string') {
             devices = devices.map(d => ({ device_name: d, display_name: d }));
         }
-        
+
         const sortedDevices = sortDevices(devices, 'grid');
         const latestResponse = await fetch('/api/data/latest');
         if (!latestResponse.ok) throw new Error(`API error: ${latestResponse.status}`);
-        
+
         const latestData = await latestResponse.json();
         console.log('✅ Последние данные загружены:', latestData.length);
-        
+
         const container = document.getElementById('sensorsGrid');
         if (sortedDevices.length === 0) {
             console.log('⚠️ Нет данных датчиков');
             container.innerHTML = '<div class="empty-grid">📭 Нет данных<br>Запустите эмулятор датчиков</div>';
             return;
         }
-        
+
         const latestMap = {};
         latestData.forEach(item => { latestMap[item.device_name] = item; });
         let gridHtml = '';
@@ -133,30 +133,30 @@ async function loadDevices() {
         console.log('👁️ Загрузка списка датчиков...');
         const response = await fetch('/api/devices');
         if (!response.ok) throw new Error(`API error: ${response.status}`);
-        
+
         const devicesData = await response.json();
         console.log('✅ Датчики загружены:', devicesData.length);
-        
+
         // Преобразуем в объекты с device_name и display_name если нужно
         let devices = devicesData;
         if (devices.length > 0 && typeof devices[0] === 'string') {
             devices = devices.map(d => ({ device_name: d, display_name: d }));
         }
-        
+
         const sortedDevices = sortDevices(devices, 'list');
         const latestResponse = await fetch('/api/data/latest');
         if (!latestResponse.ok) throw new Error(`API error: ${latestResponse.status}`);
-        
+
         const latestData = await latestResponse.json();
         console.log('✅ Данные датчиков загружены:', latestData.length);
-        
+
         const container = document.getElementById('sensorsList');
         if (sortedDevices.length === 0) {
             console.log('⚠️ Список датчиков пуст');
             container.innerHTML = '<div style="text-align: center; padding: 20px; color: #94a3b8;">Нет данных<br>Запустите эмулятор</div>';
             return;
         }
-        
+
         const latestMap = {};
         latestData.forEach(item => { latestMap[item.device_name] = item; });
         container.innerHTML = '';
@@ -181,26 +181,26 @@ async function loadDevices() {
             const card = document.createElement('div');
             card.className = `sensor-card ${currentDevice === deviceName ? 'active' : ''}`;
             card.setAttribute('data-device', deviceName);
-            
+
             const nameDiv = document.createElement('div');
             nameDiv.style.width = '100%';
-            
+
             const sensorName = document.createElement('div');
             sensorName.className = 'sensor-name';
             sensorName.innerHTML = escapeHtml(displayName);
             sensorName.ondblclick = (e) => startEditSensor(deviceName, sensorName, displayName);
             sensorName.style.cursor = 'default';
-            
+
             nameDiv.appendChild(sensorName);
-            
+
             const statusSpan = document.createElement('span');
             statusSpan.style.fontSize = '20px';
             statusSpan.style.color = statusColor;
             statusSpan.innerHTML = statusIcon;
-            
+
             card.appendChild(nameDiv);
             card.appendChild(statusSpan);
-            
+
             card.onclick = () => {
                 if (viewMode === 'grid') showDetailView(deviceName);
                 else { currentDevice = deviceName; highlightSelectedSensor(deviceName); loadLatestData(deviceName); checkAndStartLiveMode(); loadChartData(deviceName); }
@@ -225,7 +225,7 @@ async function loadLatestData(deviceName) {
         if (data && data.length > 0) {
             const latest = data[0];
             const displayName = latest.display_name || latest.device_name || deviceName;
-            
+
             const sensorNameEl = document.getElementById('currentSensorName');
             // Если пользователь редактирует имя (есть input), не трогаем элемент
             if (!sensorNameEl.querySelector('input')) {
@@ -236,7 +236,7 @@ async function loadLatestData(deviceName) {
                 };
                 sensorNameEl.style.cursor = 'default';
             }
-            
+
             document.getElementById('tempVal').innerHTML = latest.temperature.toFixed(1);
             document.getElementById('humVal').innerHTML = latest.humidity.toFixed(1);
             document.getElementById('pressVal').innerHTML = latest.pressure.toFixed(1);
@@ -270,7 +270,7 @@ async function saveSensorName(deviceName, newDisplayName) {
                 display_name: newDisplayName.trim()
             })
         });
-        
+
         if (response.ok) {
             console.log(`✅ Датчик переименован: "${deviceName}" → "${newDisplayName}"`);
             await loadDevices();
@@ -282,11 +282,11 @@ async function saveSensorName(deviceName, newDisplayName) {
             return true;
         } else {
             const error = await response.json();
-            alert(`Ошибка: ${error.error || 'Неизвестная ошибка'}`);
+            console.error(`Ошибка переименования: ${error.error || 'Неизвестная ошибка'}`);
             return false;
         }
     } catch (error) {
-        alert('Ошибка подключения к серверу');
+        console.error('Ошибка подключения к серверу');
         console.error(error);
         return false;
     }
@@ -294,10 +294,10 @@ async function saveSensorName(deviceName, newDisplayName) {
 
 function startEditSensor(deviceName, nameElement, oldDisplayName) {
     if (!isAdmin) return;
-    
+
     // Предотвращаем срабатывание других обработчиков
     event.stopPropagation();
-    
+
     // Создаем input для редактирования
     const input = document.createElement('input');
     input.type = 'text';
@@ -308,13 +308,13 @@ function startEditSensor(deviceName, nameElement, oldDisplayName) {
     input.style.border = '2px solid #3b82f6';
     input.style.borderRadius = '4px';
     input.style.fontWeight = 'bold';
-    
+
     // Заменяем текст на input
     nameElement.innerHTML = '';
     nameElement.appendChild(input);
     input.focus();
     input.select();
-    
+
     // Обработчик сохранения на Enter
     input.onkeydown = async (e) => {
         if (e.key === 'Enter') {
@@ -333,7 +333,7 @@ function startEditSensor(deviceName, nameElement, oldDisplayName) {
             nameElement.innerHTML = escapeHtml(oldDisplayName);
         }
     };
-    
+
     // Обработчик потери фокуса - отмена редактирования
     input.onblur = () => {
         nameElement.innerHTML = escapeHtml(oldDisplayName);
@@ -342,7 +342,7 @@ function startEditSensor(deviceName, nameElement, oldDisplayName) {
 
 function startEditDetailSensorName(deviceName, oldDisplayName, nameElement) {
     if (!isAdmin) return;
-    
+
     // Создаем input для редактирования
     const input = document.createElement('input');
     input.type = 'text';
@@ -353,13 +353,13 @@ function startEditDetailSensorName(deviceName, oldDisplayName, nameElement) {
     input.style.border = '2px solid #3b82f6';
     input.style.borderRadius = '4px';
     input.style.fontWeight = 'bold';
-    
+
     // Заменяем текст на input
     nameElement.innerHTML = '';
     nameElement.appendChild(input);
     input.focus();
     input.select();
-    
+
     // Обработчик сохранения на Enter
     input.onkeydown = async (e) => {
         if (e.key === 'Enter') {
@@ -378,7 +378,7 @@ function startEditDetailSensorName(deviceName, oldDisplayName, nameElement) {
             nameElement.innerHTML = `📌 ${escapeHtml(oldDisplayName)}`;
         }
     };
-    
+
     // Обработчик потери фокуса - отмена редактирования
     input.onblur = () => {
         nameElement.innerHTML = `📌 ${escapeHtml(oldDisplayName)}`;
@@ -408,13 +408,13 @@ async function adminLogin() {
             if (typeof loadStatistics === 'function') {
                 await loadStatistics();
             }
-            alert('Вход выполнен успешно!');
+            console.log('✅ Вход выполнен успешно!');
             await updateNavbarButtons();
         } else {
-            alert('Неверный логин или пароль');
+            console.error('❌ Неверный логин или пароль');
         }
     } catch (error) {
-        alert('Ошибка подключения к серверу');
+        console.error('❌ Ошибка подключения к серверу');
     }
 }
 
@@ -424,7 +424,7 @@ async function adminLogout() {
             method: 'POST'
         });
         isAdmin = false;
-        
+
         // Проверяем, находимся ли мы на странице администратора
         if (document.getElementById('adminTools')) {
             if (document.getElementById('loginForm')) {
@@ -439,7 +439,7 @@ async function adminLogout() {
             if (document.getElementById('adminPassword')) {
                 document.getElementById('adminPassword').value = '';
             }
-            alert('Выход выполнен');
+            console.log('✅ Выход выполнен');
         } else {
             // Находимся на главной странице, перезагружаем
             await updateNavbarButtons();

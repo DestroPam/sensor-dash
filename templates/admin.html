@@ -36,7 +36,7 @@
                 <!-- Data Management Section -->
                 <section class="admin-section">
                     <h3>🛠️ Управление данными</h3>
-                    
+
                     <div class="admin-subsection">
                         <h4>📋 Удалить данные датчика</h4>
                         <select id="adminDeviceSelect" class="admin-select"></select>
@@ -62,14 +62,22 @@
                     </div>
                 </section>
 
-                <!-- Rename Section -->
+                <!-- Import/Export Section -->
                 <section class="admin-section">
-                    <h3>✏️ Переименование датчиков</h3>
+                    <h3>📦 Импорт / Экспорт данных</h3>
                     <div class="admin-subsection">
-                        <h4>Изменить отображаемое имя датчика</h4>
-                        <select id="adminRenameDeviceSelect" class="admin-select"></select>
-                        <input type="text" id="adminRenameInput" placeholder="Новое имя датчика" class="admin-input">
-                        <button id="adminRenameBtn" class="admin-btn">✏️ Переименовать</button>
+                        <h4>📤 Экспорт</h4>
+                        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 10px;">Выгрузить все данные датчиков
+                            и их имена в JSON файл</p>
+                        <button id="adminExportBtn" class="admin-btn">📤 Экспортировать JSON</button>
+                    </div>
+                    <div class="admin-subsection">
+                        <h4>📥 Импорт</h4>
+                        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 10px;">Загрузить данные из JSON
+                            файла (добавляет к существующим)</p>
+                        <input type="file" id="adminImportFile" accept=".json" class="admin-input"
+                            style="margin-bottom: 10px;">
+                        <button id="adminImportBtn" class="admin-btn">📥 Импортировать JSON</button>
                     </div>
                 </section>
 

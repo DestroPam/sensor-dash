@@ -38,9 +38,9 @@ def get_display_name(device_name):
 def sensor_to_dict_with_display(sensor_obj):
     """Преобразовать SensorData в словарь с display_name (сохраняя оригинальное device_name)"""
     result = sensor_obj.to_dict()
-    display_name = get_display_name(result['device_name'])
+    display_name = get_display_name(result["device_name"])
     # Добавляем display_name, но оригинальное device_name остается для запросов
-    result['display_name'] = display_name
+    result["display_name"] = display_name
     return result
 
 
@@ -54,8 +54,6 @@ def login_required(f):
         return f(*args, **kwargs)
 
     return decorated_function
-
-
 
 
 # --- API endpoints ---
@@ -156,16 +154,13 @@ def get_devices():
     """Возвращает список всех устройств с отображаемыми именами и оригинальными"""
     devices = db.session.query(SensorData.device_name).distinct().all()
     devices = [d[0] for d in devices]
-    
+
     # Возвращаем оба имени для каждого устройства
     result = []
     for device in devices:
         display_name = get_display_name(device)
-        result.append({
-            "device_name": device,
-            "display_name": display_name
-        })
-    
+        result.append({"device_name": device, "display_name": display_name})
+
     return jsonify(result)
 
 
@@ -268,20 +263,20 @@ def admin_rename_device():
     data = request.get_json()
     device_name = data.get("device_name")
     display_name = data.get("display_name")
-    
+
     if not device_name or not display_name:
         return jsonify({"error": "Missing device_name or display_name"}), 400
-    
+
     # Проверяем что датчик существует
     existing = SensorData.query.filter_by(device_name=device_name).first()
     if not existing:
         return jsonify({"error": "Device not found"}), 404
-    
+
     # Очищаем новое имя
     display_name = display_name.strip()
     if not display_name:
         return jsonify({"error": "Display name cannot be empty"}), 400
-    
+
     try:
         # Ищем существующий алиас
         alias = DeviceAlias.query.filter_by(device_name=device_name).first()
@@ -290,9 +285,18 @@ def admin_rename_device():
         else:
             alias = DeviceAlias(device_name=device_name, display_name=display_name)
             db.session.add(alias)
-        
+
         db.session.commit()
-        return jsonify({"status": "success", "device_name": device_name, "display_name": display_name}), 200
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "device_name": device_name,
+                    "display_name": display_name,
+                }
+            ),
+            200,
+        )
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
@@ -306,14 +310,123 @@ def admin_get_aliases():
     return jsonify([alias.to_dict() for alias in aliases]), 200
 
 
+@app.route("/api/admin/export", methods=["GET"])
+@login_required
+def admin_export_data():
+    """Экспортировать все данные и алиасы в JSON"""
+    try:
+        # Получаем все данные датчиков
+        all_data = SensorData.query.order_by(SensorData.timestamp.asc()).all()
+        data_list = [sensor_to_dict_with_display(d) for d in all_data]
+
+        # Получаем все алиасы
+        all_aliases = DeviceAlias.query.all()
+        aliases_list = [alias.to_dict() for alias in all_aliases]
+
+        # Формируем экспортный файл
+        export = {
+            "version": "1.0",
+            "exported_at": datetime.utcnow().isoformat(),
+            "aliases": aliases_list,
+            "sensor_data": data_list,
+        }
+
+        return jsonify(export), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/admin/import", methods=["POST"])
+@login_required
+def admin_import_data():
+    """Импортировать данные и алиасы из JSON"""
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+
+    imported_data = 0
+    imported_aliases = 0
+
+    try:
+        # Импортируем алиасы
+        if "aliases" in data:
+            for alias_data in data["aliases"]:
+                device_name = alias_data.get("device_name")
+                display_name = alias_data.get("display_name")
+                if device_name and display_name:
+                    existing = DeviceAlias.query.filter_by(
+                        device_name=device_name
+                    ).first()
+                    if existing:
+                        existing.display_name = display_name
+                    else:
+                        alias = DeviceAlias(
+                            device_name=device_name, display_name=display_name
+                        )
+                        db.session.add(alias)
+                    imported_aliases += 1
+
+        # Импортируем данные датчиков
+        if "sensor_data" in data:
+            for record in data["sensor_data"]:
+                device_name = record.get("device_name")
+                temperature = record.get("temperature")
+                humidity = record.get("humidity")
+                pressure = record.get("pressure")
+                timestamp_str = record.get("timestamp")
+
+                if not all(
+                    [
+                        device_name,
+                        temperature is not None,
+                        humidity is not None,
+                        pressure is not None,
+                    ]
+                ):
+                    continue
+
+                entry = SensorData(
+                    device_name=device_name,
+                    temperature=float(temperature),
+                    humidity=float(humidity),
+                    pressure=float(pressure),
+                )
+
+                # Если есть timestamp — используем его
+                if timestamp_str:
+                    try:
+                        entry.timestamp = datetime.fromisoformat(timestamp_str)
+                    except ValueError:
+                        pass  # Используем текущее время
+
+                db.session.add(entry)
+                imported_data += 1
+
+        db.session.commit()
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "imported_data": imported_data,
+                    "imported_aliases": imported_aliases,
+                }
+            ),
+            200,
+        )
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/")
 def index():
-    return render_template('index.html')
+    return render_template("index.html")
 
 
 @app.route("/admin")
 def admin():
-    return render_template('admin.html')
+    return render_template("admin.html")
 
 
 @app.route("/api/data/count", methods=["GET"])
@@ -327,7 +440,7 @@ def get_data_count():
 @app.route("/api/device-order/<location>", methods=["GET"])
 def get_device_order(location):
     """Возвращает сохраненный порядок датчиков для конкретной области (list или grid)"""
-    if location not in ['list', 'grid']:
+    if location not in ["list", "grid"]:
         return jsonify({"error": "Invalid location"}), 400
 
     order = DeviceOrder.query.filter_by(location=location).first()
@@ -339,7 +452,7 @@ def get_device_order(location):
 @app.route("/api/device-order/<location>", methods=["POST"])
 def save_device_order(location):
     """Сохраняет новый порядок датчиков для конкретной области (list или grid)"""
-    if location not in ['list', 'grid']:
+    if location not in ["list", "grid"]:
         return jsonify({"error": "Invalid location"}), 400
 
     data = request.get_json()
