@@ -9,24 +9,36 @@ from flask import (
 )
 from flask_cors import CORS
 from config import Config
-from models import db, SensorData, DeviceOrder, DeviceAlias
+from models import db, SensorData, DeviceOrder, DeviceAlias, User
 from datetime import datetime, timedelta
 from functools import wraps
 import json
+import os
 
 app = Flask(__name__)
 app.config.from_object(Config)
-app.config["SECRET_KEY"] = "your-secret-key-change-this-in-production"
+app.config["SECRET_KEY"] = os.environ.get(
+    "SECRET_KEY", "your-secret-key-change-this-in-production"
+)
 CORS(app)
 
 db.init_app(app)
 
+
+def init_admin_user():
+    """Инициализация пользователя admin по умолчанию"""
+    admin_user = User.query.filter_by(username="admin").first()
+    if not admin_user:
+        admin = User(username="admin", is_active=True)
+        admin.set_password("admin")  # Установить пароль по умолчанию
+        db.session.add(admin)
+        db.session.commit()
+
+
 with app.app_context():
     db.create_all()
-
-# Админские учетные данные
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "admin"
+    # Создаем admin пользователя если его нет
+    init_admin_user()
 
 
 def get_display_name(device_name):
@@ -49,7 +61,7 @@ def login_required(f):
 
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not session.get("logged_in"):
+        if not session.get("user_id"):
             return jsonify({"error": "Unauthorized"}), 401
         return f(*args, **kwargs)
 
@@ -185,8 +197,14 @@ def admin_login():
     username = data.get("username")
     password = data.get("password")
 
-    if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
-        session["logged_in"] = True
+    if not username or not password:
+        return jsonify({"error": "Username and password are required"}), 400
+
+    user = User.query.filter_by(username=username).first()
+
+    if user and user.is_active and user.check_password(password):
+        session["user_id"] = user.id
+        session["username"] = user.username
         return jsonify({"status": "success", "message": "Login successful"}), 200
     else:
         return jsonify({"error": "Invalid credentials"}), 401
@@ -194,14 +212,18 @@ def admin_login():
 
 @app.route("/api/admin/logout", methods=["POST"])
 def admin_logout():
-    session.pop("logged_in", None)
+    session.pop("user_id", None)
+    session.pop("username", None)
     return jsonify({"status": "success", "message": "Logged out"}), 200
 
 
 @app.route("/api/admin/check", methods=["GET"])
 def admin_check():
-    if session.get("logged_in"):
-        return jsonify({"authenticated": True}), 200
+    user_id = session.get("user_id")
+    if user_id:
+        user = User.query.get(user_id)
+        if user and user.is_active:
+            return jsonify({"authenticated": True, "username": user.username}), 200
     return jsonify({"authenticated": False}), 200
 
 
