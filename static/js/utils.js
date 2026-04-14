@@ -125,12 +125,12 @@ function updateAdminDeviceLists(devices) {
     const deviceSelect = document.getElementById('adminDeviceSelect');
     const rangeDeviceSelect = document.getElementById('adminRangeDeviceSelect');
     const renameDeviceSelect = document.getElementById('adminRenameDeviceSelect');
-    
+
     const options = devices.map(d => {
         const deviceName = typeof d === 'string' ? d : d.device_name;
         return `<option value="${escapeHtml(deviceName)}">${escapeHtml(deviceName)}</option>`;
     }).join('');
-    
+
     if (deviceSelect) deviceSelect.innerHTML = options;
     if (rangeDeviceSelect) rangeDeviceSelect.innerHTML = '<option value="">Все датчики</option>' + options;
     if (renameDeviceSelect) renameDeviceSelect.innerHTML = options;

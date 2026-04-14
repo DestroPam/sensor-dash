@@ -150,7 +150,11 @@ async function loadChartData(deviceName) {
                             max: finalYMax,
                             beginAtZero: currentMetric === 'humidity',
                             title: { display: true, text: metricName, font: { size: 12 } },
-                            ticks: { callback: value => value.toFixed(1) },
+                            ticks: {
+                                callback: value => value.toFixed(1),
+                                stepSize: (finalYMax - finalYMin) / 5,
+                                maxTicksLimit: 6
+                            },
                             grid: { color: 'rgba(0, 0, 0, 0.05)' }
                         }
                     },
