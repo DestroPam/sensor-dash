@@ -33,6 +33,20 @@
 
         <div id="adminTools" class="admin-tools" style="display: none;">
             <div class="admin-sections">
+                <!-- Account Management Section -->
+                <section class="admin-section">
+                    <h3>👤 Управление аккаунтом</h3>
+
+                    <div class="admin-subsection">
+                        <h4>🔑 Сменить пароль</h4>
+                        <input type="password" id="currentPassword" placeholder="Текущий пароль" class="admin-input" style="margin-bottom: 8px;">
+                        <input type="password" id="newPassword" placeholder="Новый пароль" class="admin-input" style="margin-bottom: 8px;">
+                        <input type="password" id="confirmNewPassword" placeholder="Подтвердите новый пароль" class="admin-input" style="margin-bottom: 10px;">
+                        <button id="adminChangePasswordBtn" class="admin-btn">🔑 Изменить пароль</button>
+                        <div id="passwordChangeMessage" class="admin-message" style="margin-top: 10px;"></div>
+                    </div>
+                </section>
+
                 <!-- Data Management Section -->
                 <section class="admin-section">
                     <h3>🛠️ Управление данными</h3>

@@ -247,6 +247,48 @@ async function adminImportData() {
     }
 }
 
+async function adminChangePassword() {
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+    const messageEl = document.getElementById('passwordChangeMessage');
+
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+        messageEl.textContent = 'Заполните все поля';
+        messageEl.className = 'admin-message error';
+        return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+        messageEl.textContent = 'Новые пароли не совпадают';
+        messageEl.className = 'admin-message error';
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/admin/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+        });
+
+        if (response.ok) {
+            messageEl.textContent = 'Пароль успешно изменён';
+            messageEl.className = 'admin-message success';
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmNewPassword').value = '';
+        } else {
+            const error = await response.json();
+            messageEl.textContent = error.error || 'Ошибка смены пароля';
+            messageEl.className = 'admin-message error';
+        }
+    } catch (error) {
+        messageEl.textContent = 'Ошибка подключения к серверу';
+        messageEl.className = 'admin-message error';
+    }
+}
+
 // Инициализация если это страница администратора
 if (isAdminPage) {
     document.addEventListener('DOMContentLoaded', () => {
@@ -261,6 +303,7 @@ if (isAdminPage) {
         const adminDeleteAllBtn = document.getElementById('adminDeleteAllBtn');
         const adminExportBtn = document.getElementById('adminExportBtn');
         const adminImportBtn = document.getElementById('adminImportBtn');
+        const adminChangePasswordBtn = document.getElementById('adminChangePasswordBtn');
 
         if (navBackBtn) navBackBtn.onclick = () => window.history.back();
         if (navLogoutBtn) navLogoutBtn.onclick = adminLogout;
@@ -270,6 +313,7 @@ if (isAdminPage) {
         if (adminDeleteAllBtn) adminDeleteAllBtn.onclick = adminDeleteAll;
         if (adminExportBtn) adminExportBtn.onclick = adminExportData;
         if (adminImportBtn) adminImportBtn.onclick = adminImportData;
+        if (adminChangePasswordBtn) adminChangePasswordBtn.onclick = adminChangePassword;
 
         // Позволяем нажать Enter в полях ввода
         document.getElementById('adminUsername').addEventListener('keypress', (e) => {
@@ -277,6 +321,9 @@ if (isAdminPage) {
         });
         document.getElementById('adminPassword').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') adminLogin();
+        });
+        document.getElementById('confirmNewPassword').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') adminChangePassword();
         });
     });
 }

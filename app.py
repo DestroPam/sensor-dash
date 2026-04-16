@@ -227,6 +227,32 @@ def admin_check():
     return jsonify({"authenticated": False}), 200
 
 
+@app.route("/api/admin/change-password", methods=["POST"])
+@login_required
+def admin_change_password():
+    """Сменить пароль администратора"""
+    data = request.get_json()
+    current_password = data.get("current_password")
+    new_password = data.get("new_password")
+
+    if not current_password or not new_password:
+        return jsonify({"error": "Требуются текущий и новый пароль"}), 400
+
+    user_id = session.get("user_id")
+    user = User.query.get(user_id)
+
+    if not user or not user.check_password(current_password):
+        return jsonify({"error": "Неверный текущий пароль"}), 401
+
+    if len(new_password) < 3:
+        return jsonify({"error": "Новый пароль должен содержать минимум 3 символа"}), 400
+
+    user.set_password(new_password)
+    db.session.commit()
+
+    return jsonify({"status": "success", "message": "Пароль успешно изменён"}), 200
+
+
 @app.route("/api/admin/delete/device/<device_name>", methods=["DELETE"])
 @login_required
 def admin_delete_device_data(device_name):

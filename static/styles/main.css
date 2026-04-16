@@ -368,6 +368,27 @@ button:hover {
     opacity: 0.85;
 }
 
+.admin-message {
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    display: none;
+}
+
+.admin-message.success {
+    display: block;
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #10b981;
+}
+
+.admin-message.error {
+    display: block;
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #ef4444;
+}
+
 .status-badge {
     display: inline-block;
     padding: 4px 12px;
