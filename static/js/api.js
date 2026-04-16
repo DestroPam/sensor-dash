@@ -277,19 +277,19 @@ async function loadLatestData(deviceName) {
             const now = new Date();
             const diffSeconds = Math.floor((now - updateTime) / 1000);
             const statusEl = document.getElementById('liveStatus');
-            if (diffSeconds < 10) { statusEl.innerHTML = '🟢 онлайн'; statusEl.style.background = '#10b981'; }
-            else if (diffSeconds < 60) { statusEl.innerHTML = `🟡 ${diffSeconds} сек назад`; statusEl.style.background = '#f59e0b'; }
-            else { statusEl.innerHTML = `🔴 ${Math.floor(diffSeconds / 60)} мин назад`; statusEl.style.background = '#ef4444'; }
+            if (diffSeconds < 10) { statusEl.innerHTML = 'онлайн'; statusEl.style.background = '#10b981'; }
+            else if (diffSeconds < 60) { statusEl.innerHTML = `${diffSeconds} сек назад`; statusEl.style.background = '#ef4444'; }
+            else { statusEl.innerHTML = `${Math.floor(diffSeconds / 60)} мин назад`; statusEl.style.background = '#ef4444'; }
             
             const timeEl = document.getElementById('liveUpdateTime');
             timeEl.style.display = 'block';
-            timeEl.innerHTML = `🕐 ${updateTime.toLocaleTimeString()}`;
+            timeEl.innerHTML = updateTime.toLocaleTimeString();
         } else {
-            document.getElementById('currentSensorName').innerHTML = `📌 ${escapeHtml(deviceName)} (нет данных)`;
+            document.getElementById('currentSensorName').innerHTML = `${escapeHtml(deviceName)} (нет данных)`;
             document.getElementById('tempVal').innerHTML = '--'; 
             document.getElementById('humVal').innerHTML = '--'; 
             document.getElementById('pressVal').innerHTML = '--';
-            document.getElementById('liveStatus').innerHTML = '⚫ нет данных'; 
+            document.getElementById('liveStatus').innerHTML = 'нет данных'; 
             document.getElementById('liveStatus').style.background = '#64748b';
             document.getElementById('liveUpdateTime').style.display = 'none';
             document.getElementById('sensorMetrics').style.display = 'none';

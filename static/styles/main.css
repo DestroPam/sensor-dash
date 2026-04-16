@@ -579,7 +579,60 @@ hr {
 }
 
 .admin-tools {
+    margin-left: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
     animation: fadeIn 0.3s ease-in;
+}
+
+.admin-sidebar {
+    position: fixed;
+    top: 50%;
+    left: 20px;
+    transform: translateY(-50%);
+    width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 100;
+}
+
+.admin-menu-item {
+    width: 100%;
+    padding: 14px 16px;
+    text-align: left;
+    background: #e2e8f0;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    color: #1e293b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.admin-menu-item:hover {
+    background: #3b82f6;
+    color: white;
+    transform: translateX(4px);
+}
+
+.admin-menu-item.active {
+    background: #3b82f6;
+    color: white;
+}
+
+.admin-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding-bottom: 40px;
+}
+
+.admin-content .admin-section {
+    scroll-margin-top: 80px;
 }
 
 @keyframes fadeIn {
