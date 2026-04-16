@@ -90,9 +90,12 @@ async function loadGridData() {
             const deviceName = typeof device === 'string' ? device : device.device_name;
             const displayName = typeof device === 'string' ? device : device.display_name;
             const latest = latestMap[deviceName];
-            const temp = latest ? latest.temperature.toFixed(1) : '--';
-            const hum = latest ? latest.humidity.toFixed(1) : '--';
-            const press = latest ? latest.pressure.toFixed(1) : '--';
+            const hasTemp = latest && latest.temperature != null;
+            const hasHum = latest && latest.humidity != null;
+            const hasPress = latest && latest.pressure != null;
+            const temp = hasTemp ? latest.temperature.toFixed(1) : '--';
+            const hum = hasHum ? latest.humidity.toFixed(1) : '--';
+            const press = hasPress ? latest.pressure.toFixed(1) : '--';
             const timestamp = latest ? new Date(latest.timestamp) : null;
             const timeStr = timestamp ? timestamp.toLocaleTimeString() : 'нет данных';
             let status = '🟢 онлайн';
@@ -108,9 +111,9 @@ async function loadGridData() {
                         <span class="tile-status">${status}</span>
                     </div>
                     <div class="tile-metrics">
-                        <div class="tile-metric"><span class="tile-metric-label">🌡️ Температура</span><span class="tile-metric-value">${temp}<span class="tile-metric-unit">°C</span></span></div>
-                        <div class="tile-metric"><span class="tile-metric-label">💧 Влажность</span><span class="tile-metric-value">${hum}<span class="tile-metric-unit">%</span></span></div>
-                        <div class="tile-metric"><span class="tile-metric-label">⏲️ Давление</span><span class="tile-metric-value">${press}<span class="tile-metric-unit">гПа</span></span></div>
+                        ${hasTemp ? `<div class="tile-metric"><span class="tile-metric-label">🌡️ Температура</span><span class="tile-metric-value">${temp}<span class="tile-metric-unit">°C</span></span></div>` : ''}
+                        ${hasHum ? `<div class="tile-metric"><span class="tile-metric-label">💧 Влажность</span><span class="tile-metric-value">${hum}<span class="tile-metric-unit">%</span></span></div>` : ''}
+                        ${hasPress ? `<div class="tile-metric"><span class="tile-metric-label">⏲️ Давление</span><span class="tile-metric-value">${press}<span class="tile-metric-unit">гПа</span></span></div>` : ''}
                     </div>
                     <div class="tile-update-time">🕐 ${timeStr}</div>
                 </div>
@@ -237,9 +240,39 @@ async function loadLatestData(deviceName) {
                 sensorNameEl.style.cursor = 'default';
             }
 
-            document.getElementById('tempVal').innerHTML = latest.temperature.toFixed(1);
-            document.getElementById('humVal').innerHTML = latest.humidity.toFixed(1);
-            document.getElementById('pressVal').innerHTML = latest.pressure.toFixed(1);
+            // Обновляем селект метрик в зависимости от доступных данных
+            const metricSelect = document.getElementById('metricType');
+            const hasTemp = latest.temperature != null;
+            const hasHum = latest.humidity != null;
+            const hasPress = latest.pressure != null;
+            
+            const metricMap = [
+                { value: 'temperature', label: 'Температура', icon: '🌡️' },
+                { value: 'humidity', label: 'Влажность', icon: '💧' },
+                { value: 'pressure', label: 'Давление', icon: '⏲️' }
+            ];
+            
+            metricSelect.innerHTML = '';
+            if (hasTemp) metricSelect.innerHTML += `<option value="temperature">🌡️ Температура</option>`;
+            if (hasHum) metricSelect.innerHTML += `<option value="humidity">💧 Влажность</option>`;
+            if (hasPress) metricSelect.innerHTML += `<option value="pressure">⏲️ Давление</option>`;
+            
+            // Если текущая метрика недоступна, выбираем первую доступную
+            if (!metricSelect.querySelector(`option[value="${currentMetric}"]`) && metricSelect.options.length > 0) {
+                currentMetric = metricSelect.options[0].value;
+                metricSelect.value = currentMetric;
+            }
+
+            // Показываем/скрываем блоки метрик
+            const hasAnyMetric = hasTemp || hasHum || hasPress;
+            document.getElementById('sensorMetrics').style.display = hasAnyMetric ? 'flex' : 'none';
+            document.querySelector('.metric-temp').style.display = hasTemp ? 'block' : 'none';
+            document.querySelector('.metric-hum').style.display = hasHum ? 'block' : 'none';
+            document.querySelector('.metric-press').style.display = hasPress ? 'block' : 'none';
+
+            document.getElementById('tempVal').innerHTML = latest.temperature != null ? latest.temperature.toFixed(1) : '--';
+            document.getElementById('humVal').innerHTML = latest.humidity != null ? latest.humidity.toFixed(1) : '--';
+            document.getElementById('pressVal').innerHTML = latest.pressure != null ? latest.pressure.toFixed(1) : '--';
             const updateTime = new Date(latest.timestamp);
             const now = new Date();
             const diffSeconds = Math.floor((now - updateTime) / 1000);
@@ -247,10 +280,20 @@ async function loadLatestData(deviceName) {
             if (diffSeconds < 10) { statusEl.innerHTML = '🟢 онлайн'; statusEl.style.background = '#10b981'; }
             else if (diffSeconds < 60) { statusEl.innerHTML = `🟡 ${diffSeconds} сек назад`; statusEl.style.background = '#f59e0b'; }
             else { statusEl.innerHTML = `🔴 ${Math.floor(diffSeconds / 60)} мин назад`; statusEl.style.background = '#ef4444'; }
+            
+            const timeEl = document.getElementById('liveUpdateTime');
+            timeEl.style.display = 'block';
+            timeEl.innerHTML = `🕐 ${updateTime.toLocaleTimeString()}`;
         } else {
             document.getElementById('currentSensorName').innerHTML = `📌 ${escapeHtml(deviceName)} (нет данных)`;
-            document.getElementById('tempVal').innerHTML = '--'; document.getElementById('humVal').innerHTML = '--'; document.getElementById('pressVal').innerHTML = '--';
-            document.getElementById('liveStatus').innerHTML = '⚫ нет данных'; document.getElementById('liveStatus').style.background = '#64748b';
+            document.getElementById('tempVal').innerHTML = '--'; 
+            document.getElementById('humVal').innerHTML = '--'; 
+            document.getElementById('pressVal').innerHTML = '--';
+            document.getElementById('liveStatus').innerHTML = '⚫ нет данных'; 
+            document.getElementById('liveStatus').style.background = '#64748b';
+            document.getElementById('liveUpdateTime').style.display = 'none';
+            document.getElementById('sensorMetrics').style.display = 'none';
+            document.getElementById('metricType').innerHTML = '';
         }
     } catch (error) { console.error('Ошибка загрузки данных:', error); }
 }

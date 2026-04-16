@@ -32,30 +32,37 @@ function formatXLabel(date, timeSpanHours) {
     }
 }
 
-function aggregateDataForChart(data, maxPoints = 150) {
+function aggregateDataForChart(data, metric, maxPoints = 150) {
     if (!data || data.length === 0) return { labels: [], values: [], timeSpanHours: 0 };
 
-    const firstTime = new Date(data[0].timestamp);
-    const lastTime = new Date(data[data.length - 1].timestamp);
+    // Фильтруем данные - оставляем только те, где есть текущая метрика
+    const filteredData = data.filter(d => d[metric] !== undefined && d[metric] !== null);
+    if (filteredData.length === 0) return { labels: [], values: [], timeSpanHours: 0 };
+
+    const firstTime = new Date(filteredData[0].timestamp);
+    const lastTime = new Date(filteredData[filteredData.length - 1].timestamp);
     const timeSpanHours = (lastTime - firstTime) / (1000 * 3600);
 
-    if (data.length <= maxPoints) {
-        const labels = data.map(d => {
+    if (filteredData.length <= maxPoints) {
+        const labels = filteredData.map(d => {
             const date = new Date(d.timestamp);
             return formatXLabel(date, timeSpanHours);
         });
-        return { labels, values: data.map(d => d[currentMetric]), timeSpanHours };
+        return { labels, values: filteredData.map(d => d[metric]), timeSpanHours };
     }
 
-    const intervalSize = Math.ceil(data.length / maxPoints);
+    const intervalSize = Math.ceil(filteredData.length / maxPoints);
     const aggregatedLabels = [];
     const aggregatedValues = [];
 
-    for (let i = 0; i < data.length; i += intervalSize) {
-        const chunk = data.slice(i, Math.min(i + intervalSize, data.length));
+    for (let i = 0; i < filteredData.length; i += intervalSize) {
+        const chunk = filteredData.slice(i, Math.min(i + intervalSize, filteredData.length));
         if (chunk.length === 0) continue;
 
-        const avgValue = chunk.reduce((sum, d) => sum + d[currentMetric], 0) / chunk.length;
+        const validValues = chunk.map(d => d[metric]).filter(v => v !== undefined && v !== null);
+        if (validValues.length === 0) continue;
+        
+        const avgValue = validValues.reduce((sum, v) => sum + v, 0) / validValues.length;
         const midIndex = Math.floor(chunk.length / 2);
         const midTimestamp = chunk[midIndex].timestamp;
         const date = new Date(midTimestamp);

@@ -73,17 +73,26 @@ def login_required(f):
 def receive_data():
     """Принимает данные от эмулятора датчиков"""
     data = request.get_json()
-    required = ["device_name", "temperature", "humidity", "pressure"]
 
-    if not data or not all(field in data for field in required):
-        return jsonify({"error": "Missing required fields"}), 400
+    if not data or "device_name" not in data:
+        return jsonify({"error": "Missing device_name"}), 400
+
+    temp = None
+    hum = None
+    press = None
 
     try:
-        temp = float(data["temperature"])
-        hum = float(data["humidity"])
-        press = float(data["pressure"])
+        if "temperature" in data and data["temperature"] is not None:
+            temp = float(data["temperature"])
+        if "humidity" in data and data["humidity"] is not None:
+            hum = float(data["humidity"])
+        if "pressure" in data and data["pressure"] is not None:
+            press = float(data["pressure"])
     except (ValueError, TypeError):
         return jsonify({"error": "Invalid numeric values"}), 400
+
+    if temp is None and hum is None and press is None:
+        return jsonify({"error": "At least one metric required"}), 400
 
     sensor_entry = SensorData(
         device_name=data["device_name"], temperature=temp, humidity=hum, pressure=press

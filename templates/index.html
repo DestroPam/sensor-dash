@@ -52,27 +52,25 @@
                         <span id="currentSensorName">Выберите датчик</span>
                         <span class="status-badge" id="liveStatus">🟢 онлайн</span>
                     </div>
-                    <div class="sensor-metrics">
-                        <div class="metric">🌡️ Температура<br><span class="metric-value" id="tempVal">--</span> <span
+                    <div class="sensor-metrics" id="sensorMetrics" style="display: none;">
+                        <div class="metric metric-temp">🌡️ Температура<br><span class="metric-value" id="tempVal">--</span> <span
                                 class="metric-unit">°C</span></div>
-                        <div class="metric">💧 Влажность<br><span class="metric-value" id="humVal">--</span> <span
+                        <div class="metric metric-hum">💧 Влажность<br><span class="metric-value" id="humVal">--</span> <span
                                 class="metric-unit">%</span></div>
-                        <div class="metric">⏲️ Давление<br><span class="metric-value" id="pressVal">--</span> <span
+                        <div class="metric metric-press">⏲️ Давление<br><span class="metric-value" id="pressVal">--</span> <span
                                 class="metric-unit">гПа</span></div>
                     </div>
+                    <div class="tile-update-time" id="liveUpdateTime" style="display: none;">🕐 --</div>
                 </div>
 
                 <div class="controls">
                     <select id="metricType">
-                        <option value="temperature">Температура</option>
-                        <option value="humidity">Влажность</option>
-                        <option value="pressure">Давление</option>
                     </select>
 
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <span>📅 Период:</span>
                         <select id="periodPreset">
-                            <option value="3">🔴 В реальном времени (3 часа)</option>
+                            <option value="1">🔴 В реальном времени (1 час)</option>
                             <option value="24">Последние 24 часа</option>
                             <option value="168">Последние 7 дней</option>
                             <option value="720">Последние 30 дней</option>

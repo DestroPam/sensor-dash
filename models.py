@@ -43,9 +43,9 @@ class SensorData(db.Model):
     __tablename__ = "sensor_data"
     id = db.Column(db.Integer, primary_key=True)
     device_name = db.Column(db.String(50), nullable=False)
-    temperature = db.Column(db.Float, nullable=False)
-    humidity = db.Column(db.Float, nullable=False)
-    pressure = db.Column(db.Float, nullable=False)
+    temperature = db.Column(db.Float, nullable=True)
+    humidity = db.Column(db.Float, nullable=True)
+    pressure = db.Column(db.Float, nullable=True)
     timestamp = db.Column(db.DateTime, default=utc_plus_4_now, index=True)
 
     def to_dict(self):

@@ -45,7 +45,7 @@ function stopLiveChartUpdates() {
 
 function checkAndStartLiveMode() {
     const periodPreset = document.getElementById('periodPreset').value;
-    const isLive = (periodPreset === '3');
+    const isLive = (periodPreset === '1');
     if (isLive && currentDevice) {
         startLiveChartUpdates();
     } else {
@@ -76,7 +76,21 @@ async function loadChartData(deviceName) {
 
         data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-        const { labels, values, timeSpanHours } = aggregateDataForChart(data, 150);
+        // Фильтруем данные - оставляем только те, где есть выбранная метрика
+        const filteredData = data.filter(d => d[currentMetric] !== undefined && d[currentMetric] !== null);
+        
+        if (filteredData.length === 0) {
+            const availableMetrics = [];
+            if (data.some(d => d.temperature != null)) availableMetrics.push('температура');
+            if (data.some(d => d.humidity != null)) availableMetrics.push('влажность');
+            if (data.some(d => d.pressure != null)) availableMetrics.push('давление');
+            const msg = `Нет данных: ${getMetricLabel(currentMetric)}. Доступно: ${availableMetrics.join(', ')}`;
+            if (chartInstance) { chartInstance.data.labels = [msg]; chartInstance.data.datasets[0].data = [0]; chartInstance.update(); }
+            else { const ctx = document.getElementById('mainChart').getContext('2d'); chartInstance = new Chart(ctx, { type: 'line', data: { labels: [msg], datasets: [{ label: 'Нет данных', data: [0], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', tension: 0.3, fill: true }] }, options: { responsive: true, maintainAspectRatio: true } }); }
+            return;
+        }
+
+        const { labels, values, timeSpanHours } = aggregateDataForChart(filteredData, currentMetric, 150);
 
         const metricName = getMetricLabel(currentMetric);
         const xAxisTitle = timeSpanHours > 48 ? 'Дата' : 'Время';
