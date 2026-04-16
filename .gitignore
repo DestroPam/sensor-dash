@@ -3,3 +3,4 @@ instance
 .venv
 .ruff_cache
 .vs
+.kilo

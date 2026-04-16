@@ -16,6 +16,17 @@ import requests
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+# Варианты комплектации датчиков
+METRIC_SETS = [
+    ['temperature', 'humidity', 'pressure'],  # полный датчик
+    ['temperature', 'humidity'],             # без давления
+    ['temperature', 'pressure'],              # без влажности
+    ['temperature'],                         # только температура
+    ['humidity', 'pressure'],                # без температуры
+    ['humidity'],                            # только влажность
+    ['pressure'],                            # только давление
+]
+
 class SensorEmulator:
     def __init__(self, num_sensors=2, server_url="http://localhost:5000", interval=5):
         """
@@ -29,18 +40,22 @@ class SensorEmulator:
         self.interval = interval
         self.running = True
         
-        # Создаем список устройств
+        # Создаем список устройств с разными типами
         self.devices = [f"emulator {i+1}" for i in range(num_sensors)]
         
         # Для каждого устройства свои базовые параметры с более широким диапазоном
         self.device_profiles = {}
         for i, device_name in enumerate(self.devices):
+            # Выбираем набор метрик (циклически)
+            metrics = METRIC_SETS[i % len(METRIC_SETS)]
+            
             # Разные диапазоны для разных датчиков, чтобы данные были интереснее
             base_temp = 18 + (i % 10)  # от 18 до 27 градусов
             self.device_profiles[device_name] = {
-                'temp': (base_temp, base_temp + 6),  # диапазон 6 градусов
-                'hum': (35 + (i % 30), 65 + (i % 20)),  # от 35% до 85%
-                'press': (1005 + (i % 15), 1020 + (i % 10)),  # от 1005 до 1030 гПа
+                'metrics': metrics,
+                'temp': (base_temp, base_temp + 6) if 'temperature' in metrics else None,
+                'hum': (35 + (i % 30), 65 + (i % 20)) if 'humidity' in metrics else None,
+                'press': (1005 + (i % 15), 1020 + (i % 10)) if 'pressure' in metrics else None,
                 'trend': 0  # для имитации тренда
             }
         
@@ -49,64 +64,63 @@ class SensorEmulator:
         for device_name in self.devices:
             profile = self.device_profiles[device_name]
             self.last_values[device_name] = {
-                'temperature': (profile['temp'][0] + profile['temp'][1]) / 2,
-                'humidity': (profile['hum'][0] + profile['hum'][1]) / 2,
-                'pressure': (profile['press'][0] + profile['press'][1]) / 2
+                'temperature': (profile['temp'][0] + profile['temp'][1]) / 2 if profile['temp'] else None,
+                'humidity': (profile['hum'][0] + profile['hum'][1]) / 2 if profile['hum'] else None,
+                'pressure': (profile['press'][0] + profile['press'][1]) / 2 if profile['press'] else None
             }
 
     def generate_sensor_data(self, device_name):
         """Генерирует данные для конкретного датчика с учетом тренда и плавности"""
         profile = self.device_profiles[device_name]
         last = self.last_values[device_name]
+        metrics = profile['metrics']
+        
+        data = {"device_name": device_name}
         
         # Добавляем небольшой тренд для более реалистичных данных
         profile['trend'] += random.uniform(-0.2, 0.2)
         profile['trend'] = max(-3, min(3, profile['trend']))  # ограничиваем тренд
         
-        # Плавное изменение температуры (не больше чем на 0.5 градуса за раз)
-        temp_change = random.uniform(-0.3, 0.3) + profile['trend'] * 0.1
-        new_temp = last['temperature'] + temp_change
-        new_temp = max(profile['temp'][0], min(profile['temp'][1], new_temp))
+        # Генерируем только те метрики, которые есть у данного датчика
+        if 'temperature' in metrics and profile['temp']:
+            temp_change = random.uniform(-0.3, 0.3) + profile['trend'] * 0.1
+            new_temp = last['temperature'] + temp_change
+            new_temp = max(profile['temp'][0], min(profile['temp'][1], new_temp))
+            data['temperature'] = round(new_temp, 1)
+            last['temperature'] = data['temperature']
         
-        # Плавное изменение влажности
-        hum_change = random.uniform(-0.8, 0.8) + profile['trend'] * 0.05
-        new_hum = last['humidity'] + hum_change
-        new_hum = max(profile['hum'][0], min(profile['hum'][1], new_hum))
+        if 'humidity' in metrics and profile['hum']:
+            hum_change = random.uniform(-0.8, 0.8) + profile['trend'] * 0.05
+            new_hum = last['humidity'] + hum_change
+            new_hum = max(profile['hum'][0], min(profile['hum'][1], new_hum))
+            data['humidity'] = round(new_hum, 1)
+            last['humidity'] = data['humidity']
         
-        # Плавное изменение давления
-        press_change = random.uniform(-0.5, 0.5)
-        new_press = last['pressure'] + press_change
-        new_press = max(profile['press'][0], min(profile['press'][1], new_press))
+        if 'pressure' in metrics and profile['press']:
+            press_change = random.uniform(-0.5, 0.5)
+            new_press = last['pressure'] + press_change
+            new_press = max(profile['press'][0], min(profile['press'][1], new_press))
+            data['pressure'] = round(new_press, 1)
+            last['pressure'] = data['pressure']
         
-        # Округляем
-        temp = round(new_temp, 1)
-        humidity = round(new_hum, 1)
-        pressure = round(new_press, 1)
-        
-        # Сохраняем последние значения
-        self.last_values[device_name] = {
-            'temperature': temp,
-            'humidity': humidity,
-            'pressure': pressure
-        }
-        
-        return {
-            "device_name": device_name,
-            "temperature": temp,
-            "humidity": humidity,
-            "pressure": pressure
-        }
+        return data
 
     def send_sensor_data(self, device_name):
         """Отправляет данные одного датчика на сервер"""
         payload = self.generate_sensor_data(device_name)
         timestamp = datetime.now().strftime('%H:%M:%S.%f')[:-3]
+        profile = self.device_profiles[device_name]
+        
+        # Формируем строку с доступными метриками
+        metrics_str = []
+        if 'temperature' in payload: metrics_str.append(f"T={payload['temperature']:5.1f}°C")
+        if 'humidity' in payload: metrics_str.append(f"H={payload['humidity']:5.1f}%")
+        if 'pressure' in payload: metrics_str.append(f"P={payload['pressure']:6.1f}гПа")
         
         try:
             response = requests.post(self.endpoint, json=payload, timeout=5)
             if response.status_code == 201:
-                print(f"[{timestamp}] ✅ {device_name}: T={payload['temperature']:5.1f}°C, "
-                      f"H={payload['humidity']:5.1f}%, P={payload['pressure']:6.1f}гПа")
+                print(f"[{timestamp}] ✅ {device_name}: {', '.join(metrics_str)}")
                 return True, device_name, payload
             else:
                 print(f"[{timestamp}] ❌ {device_name}: Ошибка {response.status_code}")
