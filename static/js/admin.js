@@ -62,6 +62,8 @@ async function checkAdminStatus() {
 async function adminLogin() {
     const username = document.getElementById('adminUsername').value;
     const password = document.getElementById('adminPassword').value;
+    const errorDiv = document.getElementById('loginError');
+    errorDiv.style.display = 'none';
     try {
         const response = await fetch('/api/admin/login', {
             method: 'POST',
@@ -70,6 +72,7 @@ async function adminLogin() {
         });
         if (response.ok) {
             isAdmin = true;
+            errorDiv.style.display = 'none';
             document.getElementById('loginForm').style.display = 'none';
             document.getElementById('adminTools').style.display = 'flex';
             document.getElementById('adminSidebar').style.display = 'flex';
@@ -77,6 +80,8 @@ async function adminLogin() {
             await loadStatistics();
             console.log('✅ Вход выполнен успешно!');
         } else {
+            errorDiv.textContent = 'Неверный логин или пароль';
+            errorDiv.style.display = 'block';
             console.error('❌ Неверный логин или пароль');
         }
     } catch (error) {
