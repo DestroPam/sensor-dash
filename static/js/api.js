@@ -102,7 +102,6 @@ async function loadGridData() {
             if (timestamp) {
                 const diffSeconds = Math.floor((new Date() - timestamp) / 1000);
                 if (diffSeconds > 60) status = '🔴 оффлайн';
-                else if (diffSeconds > 10) status = '🟡 ожидание';
             } else status = '⚫ нет данных';
             gridHtml += `
                 <div class="sensor-tile" data-device="${escapeHtml(deviceName)}" onclick="showDetailView('${escapeHtml(deviceName)}')">
@@ -277,8 +276,7 @@ async function loadLatestData(deviceName) {
             const now = new Date();
             const diffSeconds = Math.floor((now - updateTime) / 1000);
             const statusEl = document.getElementById('liveStatus');
-            if (diffSeconds < 10) { statusEl.innerHTML = 'онлайн'; statusEl.style.background = '#10b981'; }
-            else if (diffSeconds < 60) { statusEl.innerHTML = `${diffSeconds} сек назад`; statusEl.style.background = '#ef4444'; }
+            if (diffSeconds < 60) { statusEl.innerHTML = 'онлайн'; statusEl.style.background = '#10b981'; }
             else { statusEl.innerHTML = `${Math.floor(diffSeconds / 60)} мин назад`; statusEl.style.background = '#ef4444'; }
             
             const timeEl = document.getElementById('liveUpdateTime');
