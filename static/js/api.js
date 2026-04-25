@@ -146,6 +146,7 @@ async function loadDevices() {
         }
 
         const sortedDevices = sortDevices(devices, 'list');
+        window.allDevices = sortedDevices;
         const latestResponse = await fetch('/api/data/latest');
         if (!latestResponse.ok) throw new Error(`API error: ${latestResponse.status}`);
 

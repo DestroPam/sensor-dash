@@ -69,8 +69,15 @@ async function loadChartData(deviceName) {
         const response = await fetch(url);
         let data = await response.json();
         if (data.length === 0) {
-            if (chartInstance) { chartInstance.data.labels = ['Нет данных']; chartInstance.data.datasets[0].data = [0]; chartInstance.update(); }
-            else { const ctx = document.getElementById('mainChart').getContext('2d'); chartInstance = new Chart(ctx, { type: 'line', data: { labels: ['Нет данных'], datasets: [{ label: 'Нет данных', data: [0], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', tension: 0.3, fill: true }] }, options: { responsive: true, maintainAspectRatio: true } }); }
+            const chartElement = document.getElementById('mainChart');
+            if (chartElement) {
+                const chartContainer = chartElement.parentElement;
+                chartContainer.innerHTML = '<div class="no-data-message" style="text-align: center; padding: 40px; color: #94a3b8; width: 100%;">Нет данных</div>';
+            }
+            if (chartInstance) {
+                chartInstance.destroy();
+                chartInstance = null;
+            }
             return;
         }
 
@@ -80,17 +87,31 @@ async function loadChartData(deviceName) {
         const filteredData = data.filter(d => d[currentMetric] !== undefined && d[currentMetric] !== null);
         
         if (filteredData.length === 0) {
-            const availableMetrics = [];
-            if (data.some(d => d.temperature != null)) availableMetrics.push('температура');
-            if (data.some(d => d.humidity != null)) availableMetrics.push('влажность');
-            if (data.some(d => d.pressure != null)) availableMetrics.push('давление');
-            const msg = `Нет данных: ${getMetricLabel(currentMetric)}. Доступно: ${availableMetrics.join(', ')}`;
-            if (chartInstance) { chartInstance.data.labels = [msg]; chartInstance.data.datasets[0].data = [0]; chartInstance.update(); }
-            else { const ctx = document.getElementById('mainChart').getContext('2d'); chartInstance = new Chart(ctx, { type: 'line', data: { labels: [msg], datasets: [{ label: 'Нет данных', data: [0], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', tension: 0.3, fill: true }] }, options: { responsive: true, maintainAspectRatio: true } }); }
+            const chartContainer = document.getElementById('mainChart').parentElement;
+            chartContainer.innerHTML = '<div class="no-data-message" style="text-align: center; padding: 40px; color: #94a3b8; width: 100%;">Нет данных</div>';
+            if (chartInstance) {
+                chartInstance.destroy();
+                chartInstance = null;
+            }
             return;
         }
 
         const { labels, values, timeSpanHours } = aggregateDataForChart(filteredData, currentMetric, 150);
+
+        // Clear the "Нет данных" message if it exists and restore canvas
+        let chartElement = document.getElementById('mainChart');
+        let chartContainer = document.querySelector('.chart-container');
+        if (!chartElement && chartContainer) {
+            // Check if we have a "no-data-message" and replace it with canvas
+            if (chartContainer.innerHTML && chartContainer.innerHTML.includes('no-data-message')) {
+                chartContainer.innerHTML = '<canvas id="mainChart" width="800" height="350"></canvas>';
+                chartElement = document.getElementById('mainChart');
+            }
+        }
+        // If we still don't have chartElement, try to get it again
+        if (!chartElement) {
+            chartElement = document.getElementById('mainChart');
+        }
 
         const metricName = getMetricLabel(currentMetric);
         const xAxisTitle = timeSpanHours > 48 ? 'Дата' : 'Время';
@@ -98,7 +119,9 @@ async function loadChartData(deviceName) {
         if (chartInstance) {
             chartInstance.data.labels = labels;
             chartInstance.data.datasets[0].data = values;
-            chartInstance.data.datasets[0].label = `${deviceName} - ${metricName}`;
+            const deviceInfo = window.allDevices.find(d => d.device_name === deviceName);
+            const displayName = deviceInfo ? deviceInfo.display_name : deviceName;
+            chartInstance.data.datasets[0].label = `${displayName} - ${metricName}`;
             if (chartInstance.options.scales && chartInstance.options.scales.x) {
                 chartInstance.options.scales.x.title.text = xAxisTitle;
             }
@@ -114,12 +137,14 @@ async function loadChartData(deviceName) {
             if (currentMetric === 'humidity') { yMin = Math.max(0, yMin); yMax = Math.min(100, yMax); }
             const finalYMin = Math.floor(yMin * 10) / 10, finalYMax = Math.ceil(yMax * 10) / 10;
             const ctx = document.getElementById('mainChart').getContext('2d');
+            const deviceInfo = window.allDevices.find(d => d.device_name === deviceName);
+            const displayName = deviceInfo ? deviceInfo.display_name : deviceName;
             chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: `${deviceName} - ${metricName}`,
+                        label: `${displayName} - ${metricName}`,
                         data: values,
                         borderColor: '#3b82f6',
                         backgroundColor: 'rgba(59, 130, 246, 0.1)',
