@@ -81,6 +81,18 @@ async function loadChartData(deviceName) {
             return;
         }
 
+        // Apply timezone offset before sorting
+        const timezoneOffset = getTimezoneOffset((window.systemConfig && window.systemConfig.timezone) || 'UTC+4');
+        const serverOffset = 240; // server is UTC+4
+        const timezoneAdjustment = timezoneOffset - serverOffset;
+        data.forEach(d => {
+            if (d.timestamp) {
+                const dt = new Date(d.timestamp);
+                dt.setMinutes(dt.getMinutes() + timezoneAdjustment);
+                d.timestamp = dt.toISOString();
+            }
+        });
+
         data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
         // Фильтруем данные - оставляем только те, где есть выбранная метрика
@@ -98,40 +110,49 @@ async function loadChartData(deviceName) {
 
         const { labels, values, timeSpanHours } = aggregateDataForChart(filteredData, currentMetric, 150);
 
+        // Apply unit conversions for Y-axis values
+        let convertedValues = values;
+        let yAxisTitle = getMetricLabel(currentMetric);
+        
+        if (currentMetric === 'temperature' && window.systemConfig && window.systemConfig.tempUnit === 'fahrenheit') {
+            convertedValues = values.map(v => convertTemperature(v, 'fahrenheit'));
+            yAxisTitle = 'Температура (°F)';
+        } else if (currentMetric === 'pressure' && window.systemConfig && window.systemConfig.pressureUnit) {
+            convertedValues = values.map(v => convertPressure(v, window.systemConfig.pressureUnit));
+            yAxisTitle = `Давление (${getPressureUnitLabel(window.systemConfig.pressureUnit)})`;
+        }
+
         // Clear the "Нет данных" message if it exists and restore canvas
         let chartElement = document.getElementById('mainChart');
         let chartContainer = document.querySelector('.chart-container');
         if (!chartElement && chartContainer) {
-            // Check if we have a "no-data-message" and replace it with canvas
             if (chartContainer.innerHTML && chartContainer.innerHTML.includes('no-data-message')) {
                 chartContainer.innerHTML = '<canvas id="mainChart" width="800" height="350"></canvas>';
                 chartElement = document.getElementById('mainChart');
             }
         }
-        // If we still don't have chartElement, try to get it again
         if (!chartElement) {
             chartElement = document.getElementById('mainChart');
         }
 
-        const metricName = getMetricLabel(currentMetric);
         const xAxisTitle = timeSpanHours > 48 ? 'Дата' : 'Время';
 
         if (chartInstance) {
             chartInstance.data.labels = labels;
-            chartInstance.data.datasets[0].data = values;
+            chartInstance.data.datasets[0].data = convertedValues;
             const deviceInfo = window.allDevices.find(d => d.device_name === deviceName);
             const displayName = deviceInfo ? deviceInfo.display_name : deviceName;
-            chartInstance.data.datasets[0].label = `${displayName} - ${metricName}`;
+            chartInstance.data.datasets[0].label = `${displayName} - ${yAxisTitle}`;
             if (chartInstance.options.scales && chartInstance.options.scales.x) {
                 chartInstance.options.scales.x.title.text = xAxisTitle;
             }
             if (chartInstance.options.scales && chartInstance.options.scales.y) {
-                chartInstance.options.scales.y.title.text = metricName;
+                chartInstance.options.scales.y.title.text = yAxisTitle;
             }
-            updateChartBounds(chartInstance, values, currentMetric);
+            updateChartBounds(chartInstance, convertedValues, currentMetric);
             chartInstance.update();
         } else {
-            let minVal = Math.min(...values), maxVal = Math.max(...values);
+            let minVal = Math.min(...convertedValues), maxVal = Math.max(...convertedValues);
             let padding = currentMetric === 'temperature' ? Math.max(2, (maxVal - minVal) * 0.2) : (currentMetric === 'humidity' ? Math.max(5, (maxVal - minVal) * 0.15) : Math.max(3, (maxVal - minVal) * 0.1));
             let yMin = minVal - padding, yMax = maxVal + padding;
             if (currentMetric === 'humidity') { yMin = Math.max(0, yMin); yMax = Math.min(100, yMax); }
@@ -144,8 +165,8 @@ async function loadChartData(deviceName) {
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: `${displayName} - ${metricName}`,
-                        data: values,
+                        label: `${displayName} - ${yAxisTitle}`,
+                        data: convertedValues,
                         borderColor: '#3b82f6',
                         backgroundColor: 'rgba(59, 130, 246, 0.1)',
                         tension: 0.3,
@@ -169,6 +190,11 @@ async function loadChartData(deviceName) {
                                     let label = ctx.dataset.label || '';
                                     let value = ctx.parsed.y;
                                     let unit = currentMetric === 'temperature' ? '°C' : (currentMetric === 'humidity' ? '%' : 'гПа');
+                                    if (currentMetric === 'temperature' && window.systemConfig && window.systemConfig.tempUnit === 'fahrenheit') {
+                                        unit = '°F';
+                                    } else if (currentMetric === 'pressure' && window.systemConfig && window.systemConfig.pressureUnit) {
+                                        unit = getPressureUnitLabel(window.systemConfig.pressureUnit);
+                                    }
                                     return `${label}: ${value.toFixed(1)}${unit}`;
                                 }
                             }
@@ -188,7 +214,7 @@ async function loadChartData(deviceName) {
                             min: finalYMin,
                             max: finalYMax,
                             beginAtZero: currentMetric === 'humidity',
-                            title: { display: true, text: metricName, font: { size: 12 } },
+                            title: { display: true, text: yAxisTitle, font: { size: 12 } },
                             ticks: {
                                 callback: value => value.toFixed(1),
                                 stepSize: (finalYMax - finalYMin) / 5,

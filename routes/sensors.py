@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from models import db, SensorData, DeviceAlias
+from models import db, SensorData, DeviceAlias, utc_plus_4_now
 from datetime import datetime, timedelta
 from functools import wraps
 
@@ -90,7 +90,7 @@ def get_device_data(device_name):
         except ValueError:
             pass
     elif hours:
-        since = datetime.utcnow() - timedelta(hours=hours)
+        since = utc_plus_4_now() - timedelta(hours=hours)
         query = query.filter(SensorData.timestamp >= since)
 
     if sort_order == "desc":

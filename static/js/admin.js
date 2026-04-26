@@ -1,63 +1,154 @@
-// Админ функции для отдельной страницы администратора
+// ===== ADMIN PAGE JAVASCRIPT =====
 
-// Проверка, находимся ли мы на странице администратора
 const isAdminPage = window.location.pathname === '/admin';
 let isAdmin = false;
+let systemSettings = {};
 
-function updateAdminDeviceLists(deviceNames) {
-    const select = document.getElementById('adminDeviceSelect');
-    if (select) {
-        const currentValue = select.value;
-        select.innerHTML = '<option value="">Все датчики</option>';
-        deviceNames.forEach(device => {
-            const option = document.createElement('option');
-            option.value = device;
-            option.textContent = device;
-            select.appendChild(option);
-        });
-        if (currentValue && deviceNames.includes(currentValue)) {
-            select.value = currentValue;
+// ===== SYSTEM SETTINGS =====
+
+async function loadSettings() {
+    try {
+        const response = await fetch('/api/admin/settings');
+        if (response.ok) {
+            const data = await response.json();
+            systemSettings = data;
+            applySettingsToUI();
+            applySettingsGlobally();
         }
+    } catch (error) {
+        console.error('Ошибка загрузки настроек:', error);
     }
 }
+
+function applySettingsToUI() {
+    const tempUnitSelect = document.getElementById('tempUnitSetting');
+    if (tempUnitSelect && systemSettings.temperature_unit) {
+        tempUnitSelect.value = systemSettings.temperature_unit;
+    }
+
+    const pressUnitSelect = document.getElementById('pressUnitSetting');
+    if (pressUnitSelect && systemSettings.pressure_unit) {
+        pressUnitSelect.value = systemSettings.pressure_unit;
+    }
+
+    const timezoneSelect = document.getElementById('timezoneSetting');
+    if (timezoneSelect && systemSettings.timezone) {
+        timezoneSelect.value = systemSettings.timezone;
+    }
+
+    const offlineTimeoutInput = document.getElementById('offlineTimeoutSetting');
+    if (offlineTimeoutInput && systemSettings.offline_timeout) {
+        offlineTimeoutInput.value = systemSettings.offline_timeout;
+    }
+}
+
+async function saveSettings() {
+    const settings = {
+        temperature_unit: document.getElementById('tempUnitSetting').value,
+        pressure_unit: document.getElementById('pressUnitSetting').value,
+        timezone: document.getElementById('timezoneSetting').value,
+        offline_timeout: document.getElementById('offlineTimeoutSetting').value
+    };
+
+    const msgEl = document.getElementById('settingsMessage');
+    
+    try {
+        const response = await fetch('/api/admin/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settings)
+        });
+        
+        if (response.ok) {
+            msgEl.textContent = 'Настройки сохранены';
+            msgEl.className = 'admin-message success';
+            msgEl.style.display = 'block';
+            systemSettings = { ...systemSettings, ...settings };
+            applySettingsGlobally();
+        } else {
+            msgEl.textContent = ' Ошибка сохранения';
+            msgEl.className = 'admin-message error';
+            msgEl.style.display = 'block';
+        }
+    } catch (error) {
+        msgEl.textContent = ' Ошибка подключения';
+        msgEl.className = 'admin-message error';
+        msgEl.style.display = 'block';
+    }
+
+    setTimeout(() => {
+        if (msgEl) {
+            msgEl.style.display = 'none';
+            msgEl.textContent = '';
+            msgEl.className = 'admin-message';
+        }
+    }, 3000);
+}
+
+function applySettingsGlobally() {
+    window.systemConfig = window.systemConfig || {};
+    window.systemConfig.offlineTimeout = parseInt(systemSettings.offline_timeout || '60');
+    window.systemConfig.timezone = systemSettings.timezone || 'UTC+4';
+    window.systemConfig.tempUnit = systemSettings.temperature_unit || 'celsius';
+    window.systemConfig.pressureUnit = systemSettings.pressure_unit || 'hpa';
+}
+
+// ===== DEVICE MANAGEMENT =====
 
 async function loadDevices() {
     try {
         const response = await fetch('/api/devices');
         const devicesData = await response.json();
         const deviceNames = devicesData.map(d => typeof d === 'string' ? d : d.device_name);
-        updateAdminDeviceLists(deviceNames);
+        if (typeof updateAdminDeviceLists === 'function') {
+            updateAdminDeviceLists(deviceNames);
+        }
     } catch (error) {
         console.error('Ошибка загрузки устройств:', error);
     }
 }
 
-async function checkAdminStatus() {
+async function loadStatistics() {
     try {
-        const response = await fetch('/api/admin/check');
-        const data = await response.json();
-        isAdmin = data.authenticated;
+        const devicesResponse = await fetch('/api/devices');
+        const devicesData = await devicesResponse.json();
+        const countResponse = await fetch('/api/data/count');
+        const countData = await countResponse.json();
 
-        if (isAdminPage) {
-            // На странице админ-панели
-            if (!isAdmin) {
-                // Показываем форму входа
-                document.getElementById('loginForm').style.display = 'flex';
-                document.getElementById('adminTools').style.display = 'none';
-                document.getElementById('adminSidebar').style.display = 'none';
-            } else {
-                // Показываем админ-инструменты
-                document.getElementById('loginForm').style.display = 'none';
-                document.getElementById('adminTools').style.display = 'flex';
-                document.getElementById('adminSidebar').style.display = 'flex';
-                await loadDevices();
-                await loadStatistics();
-            }
-        }
+        const activeSensorsEl = document.getElementById('activeSensorsCount');
+        const totalRecordsEl = document.getElementById('totalRecordsCount');
+
+        if (activeSensorsEl) activeSensorsEl.textContent = devicesData.length;
+        if (totalRecordsEl) totalRecordsEl.textContent = countData.count;
     } catch (error) {
-        console.error(error);
+        console.error('Ошибка загрузки статистики:', error);
     }
 }
+
+async function loadDeviceDateRange(deviceName) {
+    if (!deviceName) return null;
+    try {
+        const response = await fetch(`/api/data/device/${encodeURIComponent(deviceName)}?sort=asc&limit=1`);
+        const ascData = await response.json();
+        const responseDesc = await fetch(`/api/data/device/${encodeURIComponent(deviceName)}?sort=desc&limit=1`);
+        const descData = await responseDesc.json();
+        if (ascData.length > 0 && descData.length > 0) {
+            const start = new Date(ascData[0].timestamp);
+            const end = new Date(descData[0].timestamp);
+            const toLocalDatetime = (date) => {
+                const offset = date.getTimezoneOffset();
+                const local = new Date(date.getTime() - offset * 60000);
+                return local.toISOString().slice(0, 16);
+            };
+            return { start: toLocalDatetime(start), end: toLocalDatetime(end) };
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки периода:', error);
+    }
+    return null;
+}
+
+// ===== ADMIN ACTIONS =====
 
 async function adminLogin() {
     const username = document.getElementById('adminUsername').value;
@@ -78,22 +169,21 @@ async function adminLogin() {
             document.getElementById('adminSidebar').style.display = 'flex';
             await loadDevices();
             await loadStatistics();
-            console.log('✅ Вход выполнен успешно!');
+            await loadSettings();
+            console.log('Вход выполнен успешно!');
         } else {
             errorDiv.textContent = 'Неверный логин или пароль';
             errorDiv.style.display = 'block';
-            console.error('❌ Неверный логин или пароль');
+            console.error('Неверный логин или пароль');
         }
     } catch (error) {
-        console.error('❌ Ошибка подключения к серверу');
+        console.error('Ошибка подключения к серверу');
     }
 }
 
 async function adminLogout() {
     try {
-        await fetch('/api/admin/logout', {
-            method: 'POST'
-        });
+        await fetch('/api/admin/logout', { method: 'POST' });
         isAdmin = false;
         if (isAdminPage) {
             document.getElementById('loginForm').style.display = 'flex';
@@ -101,13 +191,68 @@ async function adminLogout() {
             document.getElementById('adminSidebar').style.display = 'none';
             document.getElementById('adminUsername').value = '';
             document.getElementById('adminPassword').value = '';
-            console.log('✅ Выход выполнен');
+            console.log('Выход выполнен');
         } else {
             window.location.reload();
         }
     } catch (error) {
         console.error(error);
     }
+}
+
+async function adminChangePassword() {
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+    const messageEl = document.getElementById('passwordChangeMessage');
+
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+        messageEl.textContent = 'Заполните все поля';
+        messageEl.className = 'admin-message error';
+        messageEl.style.display = 'block';
+        return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+        messageEl.textContent = 'Новые пароли не совпадают';
+        messageEl.className = 'admin-message error';
+        messageEl.style.display = 'block';
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/admin/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+        });
+
+        if (response.ok) {
+            messageEl.textContent = 'Пароль успешно изменён';
+            messageEl.className = 'admin-message success';
+            messageEl.style.display = 'block';
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmNewPassword').value = '';
+        } else {
+            const error = await response.json();
+            messageEl.textContent = error.error || 'Ошибка смены пароля';
+            messageEl.className = 'admin-message error';
+            messageEl.style.display = 'block';
+        }
+    } catch (error) {
+        messageEl.textContent = 'Ошибка подключения к серверу';
+        messageEl.className = 'admin-message error';
+        messageEl.style.display = 'block';
+    }
+
+    setTimeout(() => {
+        if (messageEl) {
+            messageEl.style.display = 'none';
+            messageEl.textContent = '';
+            messageEl.className = 'admin-message';
+        }
+    }, 3000);
 }
 
 async function adminDeleteData() {
@@ -121,6 +266,7 @@ async function adminDeleteData() {
     if (!device && (!startDate || !endDate)) {
         messageEl.textContent = 'Выберите датчик или период';
         messageEl.className = 'admin-message error';
+        messageEl.style.display = 'block';
         return;
     }
 
@@ -149,6 +295,7 @@ async function adminDeleteData() {
             const result = await response.json();
             messageEl.textContent = `Удалено ${result.deleted_count} записей`;
             messageEl.className = 'admin-message success';
+            messageEl.style.display = 'block';
             startDateInput.value = '';
             endDateInput.value = '';
             await loadDevices();
@@ -157,34 +304,13 @@ async function adminDeleteData() {
             const error = await response.json();
             messageEl.textContent = error.error || 'Ошибка удаления';
             messageEl.className = 'admin-message error';
+            messageEl.style.display = 'block';
         }
     } catch (error) {
         messageEl.textContent = 'Ошибка подключения';
         messageEl.className = 'admin-message error';
+        messageEl.style.display = 'block';
     }
-}
-
-async function loadDeviceDateRange(deviceName) {
-    if (!deviceName) return null;
-    try {
-        const response = await fetch(`/api/data/device/${encodeURIComponent(deviceName)}?sort=asc&limit=1`);
-        const ascData = await response.json();
-        const responseDesc = await fetch(`/api/data/device/${encodeURIComponent(deviceName)}?sort=desc&limit=1`);
-        const descData = await responseDesc.json();
-        if (ascData.length > 0 && descData.length > 0) {
-            const start = new Date(ascData[0].timestamp);
-            const end = new Date(descData[0].timestamp);
-            const toLocalDatetime = (date) => {
-                const offset = date.getTimezoneOffset();
-                const local = new Date(date.getTime() - offset * 60000);
-                return local.toISOString().slice(0, 16);
-            };
-            return { start: toLocalDatetime(start), end: toLocalDatetime(end) };
-        }
-    } catch (error) {
-        console.error('Ошибка загрузки периода:', error);
-    }
-    return null;
 }
 
 async function adminDeleteAll() {
@@ -193,43 +319,24 @@ async function adminDeleteAll() {
         return;
     }
     try {
-        const response = await fetch('/api/admin/delete/all', {
-            method: 'DELETE'
-        });
+        const response = await fetch('/api/admin/delete/all', { method: 'DELETE' });
         if (response.ok) {
             const result = await response.json();
             messageEl.textContent = `Удалено ${result.deleted_count} записей`;
             messageEl.className = 'admin-message success';
+            messageEl.style.display = 'block';
             await loadDevices();
             await loadStatistics();
         } else {
             const error = await response.json();
             messageEl.textContent = error.error || 'Ошибка удаления';
             messageEl.className = 'admin-message error';
+            messageEl.style.display = 'block';
         }
     } catch (error) {
         messageEl.textContent = 'Ошибка подключения';
         messageEl.className = 'admin-message error';
-    }
-}
-
-async function loadStatistics() {
-    try {
-        // Получаем количество активных датчиков
-        const devicesResponse = await fetch('/api/devices');
-        const devicesData = await devicesResponse.json();
-
-        // Получаем общее количество записей
-        const countResponse = await fetch('/api/data/count');
-        const countData = await countResponse.json();
-
-        const activeSensorsEl = document.getElementById('activeSensorsCount');
-        const totalRecordsEl = document.getElementById('totalRecordsCount');
-
-        if (activeSensorsEl) activeSensorsEl.textContent = devicesData.length;
-        if (totalRecordsEl) totalRecordsEl.textContent = countData.count;
-    } catch (error) {
-        console.error('Ошибка загрузки статистики:', error);
+        messageEl.style.display = 'block';
     }
 }
 
@@ -241,9 +348,9 @@ async function adminExportData() {
     try {
         const response = await fetch('/api/admin/export');
         if (!response.ok) {
-            console.error('❌ Ошибка экспорта');
+            console.error('Ошибка экспорта');
             btn.classList.remove('loading');
-            btn.textContent = '📤 Экспортировать JSON';
+            btn.textContent = 'Экспортировать JSON';
             return;
         }
 
@@ -260,12 +367,12 @@ async function adminExportData() {
         URL.revokeObjectURL(url);
 
         btn.classList.remove('loading');
-        btn.textContent = '📤 Экспортировать JSON';
-        console.log('✅ Экспорт завершён:', data.sensor_data.length, 'записей,', data.aliases.length, 'имён');
+        btn.textContent = 'Экспортировать JSON';
+        console.log('Экспорт завершён:', data.sensor_data.length, 'записей,', data.aliases.length, 'имён');
     } catch (error) {
         btn.classList.remove('loading');
-        btn.textContent = '📤 Экспортировать JSON';
-        console.error('❌ Ошибка экспорта:', error);
+        btn.textContent = 'Экспортировать JSON';
+        console.error('Ошибка экспорта:', error);
     }
 }
 
@@ -275,7 +382,7 @@ async function adminImportData() {
     const btn = document.getElementById('adminImportBtn');
 
     if (!file) {
-        console.error('❌ Выберите файл');
+        console.error('  Выберите файл');
         return;
     }
 
@@ -294,73 +401,55 @@ async function adminImportData() {
 
         if (response.ok) {
             const result = await response.json();
-            console.log(`✅ Импорт завершён: ${result.imported_data} записей, ${result.imported_aliases} имён`);
+            console.log(`Импорт завершён: ${result.imported_data} записей, ${result.imported_aliases} имён`);
             fileInput.value = '';
             btn.classList.remove('loading');
-            btn.textContent = '📥 Импортировать JSON';
+            btn.textContent = 'Импортировать JSON';
             await loadDevices();
             await loadStatistics();
         } else {
             const error = await response.json();
             btn.classList.remove('loading');
-            btn.textContent = '📥 Импортировать JSON';
-            console.error(`❌ Ошибка импорта: ${error.error || 'Неизвестная ошибка'}`);
+            btn.textContent = 'Импортировать JSON';
+            console.error(`Ошибка импорта: ${error.error || 'Неизвестная ошибка'}`);
         }
     } catch (error) {
         btn.classList.remove('loading');
-        btn.textContent = '📥 Импортировать JSON';
-        console.error('❌ Ошибка чтения файла:', error);
+        btn.textContent = ' Импортировать JSON';
+        console.error('Ошибка чтения файла:', error);
     }
 }
 
-async function adminChangePassword() {
-    const currentPassword = document.getElementById('currentPassword').value;
-    const newPassword = document.getElementById('newPassword').value;
-    const confirmNewPassword = document.getElementById('confirmNewPassword').value;
-    const messageEl = document.getElementById('passwordChangeMessage');
-
-    if (!currentPassword || !newPassword || !confirmNewPassword) {
-        messageEl.textContent = 'Заполните все поля';
-        messageEl.className = 'admin-message error';
-        return;
-    }
-
-    if (newPassword !== confirmNewPassword) {
-        messageEl.textContent = 'Новые пароли не совпадают';
-        messageEl.className = 'admin-message error';
-        return;
-    }
-
+async function checkAdminStatus() {
     try {
-        const response = await fetch('/api/admin/change-password', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
-        });
+        const response = await fetch('/api/admin/check');
+        const data = await response.json();
+        isAdmin = data.authenticated;
 
-        if (response.ok) {
-            messageEl.textContent = 'Пароль успешно изменён';
-            messageEl.className = 'admin-message success';
-            document.getElementById('currentPassword').value = '';
-            document.getElementById('newPassword').value = '';
-            document.getElementById('confirmNewPassword').value = '';
-        } else {
-            const error = await response.json();
-            messageEl.textContent = error.error || 'Ошибка смены пароля';
-            messageEl.className = 'admin-message error';
+        if (isAdminPage) {
+            if (!isAdmin) {
+                document.getElementById('loginForm').style.display = 'flex';
+                document.getElementById('adminTools').style.display = 'none';
+                document.getElementById('adminSidebar').style.display = 'none';
+            } else {
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('adminTools').style.display = 'flex';
+                document.getElementById('adminSidebar').style.display = 'flex';
+                await loadDevices();
+                await loadStatistics();
+            }
         }
     } catch (error) {
-        messageEl.textContent = 'Ошибка подключения к серверу';
-        messageEl.className = 'admin-message error';
+        console.error(error);
     }
 }
 
-// Инициализация если это страница администратора
+// ===== INITIALIZATION =====
+
 if (isAdminPage) {
     document.addEventListener('DOMContentLoaded', () => {
         checkAdminStatus();
 
-        // Навигация
         const navBackBtn = document.getElementById('navBackBtn');
         const navLogoutBtn = document.getElementById('navLogoutBtn');
         const adminLoginBtn = document.getElementById('adminLoginBtn');
@@ -369,11 +458,14 @@ if (isAdminPage) {
         const adminExportBtn = document.getElementById('adminExportBtn');
         const adminImportBtn = document.getElementById('adminImportBtn');
         const adminChangePasswordBtn = document.getElementById('adminChangePasswordBtn');
+        const adminSaveSettingsBtn = document.getElementById('adminSaveSettingsBtn');
 
         if (navBackBtn) navBackBtn.onclick = () => window.history.back();
         if (navLogoutBtn) navLogoutBtn.onclick = adminLogout;
         if (adminLoginBtn) adminLoginBtn.onclick = adminLogin;
         if (adminDeleteDataBtn) adminDeleteDataBtn.onclick = adminDeleteData;
+        if (adminChangePasswordBtn) adminChangePasswordBtn.onclick = adminChangePassword;
+        if (adminSaveSettingsBtn) adminSaveSettingsBtn.onclick = saveSettings;
 
         const deviceSelect = document.getElementById('adminDeviceSelect');
         if (deviceSelect) {
@@ -397,15 +489,14 @@ if (isAdminPage) {
         if (adminDeleteAllBtn) adminDeleteAllBtn.onclick = adminDeleteAll;
         if (adminExportBtn) adminExportBtn.onclick = adminExportData;
         if (adminImportBtn) adminImportBtn.onclick = adminImportData;
-        if (adminChangePasswordBtn) adminChangePasswordBtn.onclick = adminChangePassword;
 
-        // Обновление статистики каждые 10 секунд
+        loadSettings();
+
         setInterval(async () => {
             await loadDevices();
             await loadStatistics();
         }, 10000);
 
-        // Позволяем нажать Enter в полях ввода
         document.getElementById('adminUsername').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') adminLogin();
         });
@@ -416,7 +507,6 @@ if (isAdminPage) {
             if (e.key === 'Enter') adminChangePassword();
         });
 
-        // Sidebar menu navigation
         document.querySelectorAll('.admin-menu-item').forEach(btn => {
             btn.addEventListener('click', () => {
                 const targetId = btn.dataset.target;

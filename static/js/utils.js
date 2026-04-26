@@ -142,3 +142,77 @@ function updateAdminDeviceLists(devices) {
     if (rangeDeviceSelect) rangeDeviceSelect.innerHTML = '<option value="">Все датчики</option>' + options;
     if (renameDeviceSelect) renameDeviceSelect.innerHTML = options;
 }
+
+// Convert timezone string to offset in minutes
+function getTimezoneOffset(timezoneStr) {
+    // timezoneStr format: "UTC+4", "UTC-5", etc.
+    if (!timezoneStr) return 0;
+    const match = timezoneStr.match(/UTC([+-]?)(\d+)/);
+    if (match) {
+        const sign = match[1] === '-' ? -1 : 1;
+        const hours = parseInt(match[2], 10);
+        return sign * hours * 60;
+    }
+    // If it's just a number like "+4", convert it
+    if (timezoneStr.startsWith('+') || timezoneStr.startsWith('-')) {
+        const hours = parseInt(timezoneStr, 10);
+        return hours * 60;
+    }
+    return 0;
+}
+
+// Format time with timezone offset applied
+function formatTimeWithTimezone(date, timezoneOffsetMinutes) {
+    const d = new Date(date);
+    d.setMinutes(d.getMinutes() + timezoneOffsetMinutes);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+// Temperature conversion
+function convertTemperature(value, toUnit) {
+    if (!value && value !== 0) return null;
+    if (toUnit === 'fahrenheit') {
+        return (value * 9/5) + 32;
+    }
+    return value; // celsius
+}
+
+function convertFromTemperature(value, fromUnit) {
+    if (!value && value !== 0) return null;
+    if (fromUnit === 'fahrenheit') {
+        return (value - 32) * 5/9;
+    }
+    return value;
+}
+
+// Pressure conversion
+function convertPressure(value, toUnit) {
+    if (!value && value !== 0) return null;
+    const hpa = value;
+    switch (toUnit) {
+        case 'mmhg': return hpa * 0.750062;
+        case 'inhg': return hpa * 0.02953;
+        case 'psi': return hpa * 0.0145038;
+        default: return hpa;
+    }
+}
+
+function convertFromPressure(value, fromUnit) {
+    if (!value && value !== 0) return null;
+    switch (fromUnit) {
+        case 'mmhg': return value / 0.750062;
+        case 'inhg': return value / 0.02953;
+        case 'psi': return value / 0.0145038;
+        default: return value; // hpa
+    }
+}
+
+function getPressureUnitLabel(unit) {
+    switch (unit) {
+        case 'hpa': return 'гПа';
+        case 'mmhg': return 'мм рт. ст.';
+        case 'inhg': return 'дюймы рт. ст.';
+        case 'psi': return 'psi';
+        default: return 'гПа';
+    }
+}

@@ -70,6 +70,74 @@
                         <button id="adminChangePasswordBtn" class="admin-btn">Изменить пароль</button>
                         <div id="passwordChangeMessage" class="admin-message" style="margin-top: 10px;"></div>
                     </div>
+
+                    <!-- System Settings -->
+                    <div class="admin-subsection" style="margin-top: 30px;">
+                        <h4>Настройки системы</h4>
+                        
+                        <!-- Temperature unit -->
+                        <div class="setting-row">
+                            <label for="tempUnitSetting">Единицы температуры:</label>
+                            <select id="tempUnitSetting" class="admin-select" style="width: 200px;">
+                                <option value="celsius">Цельсий (°C)</option>
+                                <option value="fahrenheit">Фаренгейт (°F)</option>
+                            </select>
+                        </div>
+
+                        <!-- Pressure unit -->
+                        <div class="setting-row">
+                            <label for="pressUnitSetting">Единицы давления:</label>
+                            <select id="pressUnitSetting" class="admin-select" style="width: 200px;">
+                                <option value="hpa">Гектопаскали (гПа)</option>
+                                <option value="mmhg">Миллиметры ртутного столба</option>
+                                <option value="inhg">Дюймы ртутного столба</option>
+                                <option value="psi">Фунты на кв. дюйм</option>
+                            </select>
+                        </div>
+
+                        <!-- Timezone -->
+                        <div class="setting-row">
+                            <label for="timezoneSetting">Часовой пояс:</label>
+                            <select id="timezoneSetting" class="admin-select" style="width: 200px;">
+                                <option value="UTC-11">UTC-11 (Мидуэй)</option>
+                                <option value="UTC-10">UTC-10 (Гавайи)</option>
+                                <option value="UTC-9">UTC-9 (Аляска)</option>
+                                <option value="UTC-8">UTC-8 (Тихоокеанское время)</option>
+                                <option value="UTC-7">UTC-7 (Горное время)</option>
+                                <option value="UTC-6">UTC-6 (Центральное время)</option>
+                                <option value="UTC-5">UTC-5 (Восточное время)</option>
+                                <option value="UTC-4">UTC-4 (Атлантическое время)</option>
+                                <option value="UTC-3">UTC-3 (Бразилия)</option>
+                                <option value="UTC-2">UTC-2 (Средне-Атлантическое)</option>
+                                <option value="UTC-1">UTC-1 (Азорские острова)</option>
+                                <option value="UTC+0">UTC+0 (Лондон)</option>
+                                <option value="UTC+1">UTC+1 (Центральная Европа)</option>
+                                <option value="UTC+2">UTC+2 (Восточная Европа)</option>
+                                <option value="UTC+3">UTC+3 (Москва)</option>
+                                <option value="UTC+4">UTC+4 (Самара)</option>
+                                <option value="UTC+5">UTC+5 (Екатеринбург)</option>
+                                <option value="UTC+6">UTC+6 (Омск)</option>
+                                <option value="UTC+7">UTC+7 (Красноярск)</option>
+                                <option value="UTC+8">UTC+8 (Пекин)</option>
+                                <option value="UTC+9">UTC+9 (Токио)</option>
+                                <option value="UTC+10">UTC+10 (Владивосток)</option>
+                                <option value="UTC+11">UTC+11 (Магадан)</option>
+                                <option value="UTC+12">UTC+12 (Камчатка)</option>
+                            </select>
+                        </div>
+
+                        <!-- Offline timeout -->
+                        <div class="setting-row">
+                            <label for="offlineTimeoutSetting">Таймаут "офлайн" (сек):</label>
+                            <input type="number" id="offlineTimeoutSetting" class="admin-input" style="width: 120px;" min="5" max="3600" value="60">
+                            <span style="color: #64748b; font-size: 0.85rem; margin-left: 10px;">Датчик считается оффлайн, если нет данных дольше N секунд</span>
+                        </div>
+
+                        <div style="margin-top: 15px;">
+                            <button id="adminSaveSettingsBtn" class="admin-btn">Сохранить настройки</button>
+                            <span id="settingsMessage" class="admin-message" style="margin-left: 10px;"></span>
+                        </div>
+                    </div>
                 </section>
 
                 <!-- Data Management Section -->

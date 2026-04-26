@@ -99,3 +99,13 @@ class DeviceOrder(db.Model):
             "location": self.location,
             "device_order": json.loads(self.device_order),
         }
+
+
+class SystemSettings(db.Model):
+    __tablename__ = "system_settings"
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(50), nullable=False, unique=True)
+    value = db.Column(db.Text, nullable=True)
+
+    def to_dict(self):
+        return {"key": self.key, "value": self.value}

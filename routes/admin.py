@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request, session
-from models import db, SensorData, DeviceAlias, User
+from models import db, SensorData, DeviceAlias, User, SystemSettings
 from datetime import datetime
 from functools import wraps
 
@@ -13,6 +13,37 @@ def login_required(f):
             return jsonify({"error": "Unauthorized"}), 401
         return f(*args, **kwargs)
     return decorated_function
+
+
+def get_setting(key, default=None):
+    """Получить значение настройки"""
+    setting = SystemSettings.query.filter_by(key=key).first()
+    return setting.value if setting else default
+
+
+def set_setting(key, value):
+    """Установить значение настройки"""
+    setting = SystemSettings.query.filter_by(key=key).first()
+    if setting:
+        setting.value = value
+    else:
+        setting = SystemSettings(key=key, value=value)
+        db.session.add(setting)
+    db.session.commit()
+
+
+def init_default_settings():
+    """Инициализировать настройки по умолчанию"""
+    defaults = {
+        'timezone': 'UTC+4',
+        'temperature_unit': 'celsius',
+        'pressure_unit': 'hpa',
+        'offline_timeout': '60'
+    }
+    for key, value in defaults.items():
+        existing = SystemSettings.query.filter_by(key=key).first()
+        if not existing:
+            set_setting(key, value)
 
 
 @admin_bp.route("/login", methods=["POST"])
@@ -272,6 +303,65 @@ def admin_import_data():
             ),
             200,
         )
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+# ===== SYSTEM SETTINGS =====
+
+@admin_bp.route("/settings", methods=["GET"])
+def get_settings():
+    """Получить все настройки системы (общедоступно)"""
+    try:
+        settings = SystemSettings.query.all()
+        result = {}
+        for setting in settings:
+            result[setting.key] = setting.value
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@admin_bp.route("/settings", methods=["POST"])
+@login_required
+def update_settings():
+    """Обновить настройки системы"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+
+        allowed_keys = ['timezone', 'temperature_unit', 'pressure_unit', 'offline_timeout']
+        updated = []
+
+        for key, value in data.items():
+            if key not in allowed_keys:
+                continue
+
+            # Валидация
+            if key == 'timezone':
+                # Проверяем формат UTC±N или число [-14, 14]
+                if not (value.startswith('UTC') or (value.lstrip('-').isdigit() and -14 <= int(value) <= 14)):
+                    continue
+            elif key == 'temperature_unit':
+                if value not in ['celsius', 'fahrenheit']:
+                    continue
+            elif key == 'pressure_unit':
+                if value not in ['hpa', 'mmhg', 'inhg', 'psi']:
+                    continue
+            elif key == 'offline_timeout':
+                try:
+                    timeout = int(value)
+                    if timeout < 5 or timeout > 3600:
+                        continue
+                except (ValueError, TypeError):
+                    continue
+
+            set_setting(key, value)
+            updated.append(key)
+
+        return jsonify({"status": "success", "updated": updated}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500

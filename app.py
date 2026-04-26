@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request, render_template, session, redirect, url_for
 from flask_cors import CORS
 from config import Config
-from models import db, SensorData, DeviceOrder, DeviceAlias, User
+from models import db, SensorData, DeviceOrder, DeviceAlias, User, SystemSettings
 from datetime import datetime, timedelta
 import os
 
@@ -24,9 +24,26 @@ def init_admin_user():
         db.session.commit()
 
 
+def init_system_settings():
+    """Инициализировать настройки системы по умолчанию"""
+    defaults = {
+        'timezone': 'UTC+4',
+        'temperature_unit': 'celsius',
+        'pressure_unit': 'hpa',
+        'offline_timeout': '60'
+    }
+    for key, value in defaults.items():
+        existing = SystemSettings.query.filter_by(key=key).first()
+        if not existing:
+            setting = SystemSettings(key=key, value=value)
+            db.session.add(setting)
+    db.session.commit()
+
+
 with app.app_context():
     db.create_all()
     init_admin_user()
+    init_system_settings()
 
 
 def get_display_name(device_name):

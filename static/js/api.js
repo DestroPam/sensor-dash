@@ -1,5 +1,37 @@
 // API функции
 
+// Load system configuration
+async function loadSystemConfig() {
+    try {
+        // Try to get settings from admin endpoint or a new endpoint
+        // For now, use defaults; will be overridden if admin sets them
+        window.systemConfig = {
+            offlineTimeout: 60,
+            timezone: 'UTC+4',
+            tempUnit: 'celsius',
+            pressureUnit: 'hpa'
+        };
+        
+        // Try to fetch from settings (will work if logged in as admin)
+        try {
+            const response = await fetch('/api/admin/settings');
+            if (response.ok) {
+                const data = await response.json();
+                window.systemConfig = {
+                    offlineTimeout: parseInt(data.offline_timeout) || 60,
+                    timezone: data.timezone || 'UTC+4',
+                    tempUnit: data.temperature_unit || 'celsius',
+                    pressureUnit: data.pressure_unit || 'hpa'
+                };
+            }
+        } catch (e) {
+            // Non-admin users use defaults
+        }
+    } catch (error) {
+        console.error('Error loading system config:', error);
+    }
+}
+
 function loadDeviceOrder() {
     console.log('🔄 Загрузка порядка датчиков...');
     return Promise.race([
@@ -85,6 +117,15 @@ async function loadGridData() {
 
         const latestMap = {};
         latestData.forEach(item => { latestMap[item.device_name] = item; });
+        
+        // Get offline timeout from settings
+        const offlineTimeout = (window.systemConfig && window.systemConfig.offlineTimeout) || 60;
+        const tempUnit = (window.systemConfig && window.systemConfig.tempUnit) || 'celsius';
+        const pressUnit = (window.systemConfig && window.systemConfig.pressureUnit) || 'hpa';
+        const timezoneOffset = getTimezoneOffset((window.systemConfig && window.systemConfig.timezone) || 'UTC+4');
+        const serverOffset = 240; // UTC+4 in minutes
+        const timezoneAdjustment = timezoneOffset - serverOffset;
+        
         let gridHtml = '';
         sortedDevices.forEach((device) => {
             const deviceName = typeof device === 'string' ? device : device.device_name;
@@ -93,16 +134,30 @@ async function loadGridData() {
             const hasTemp = latest && latest.temperature != null;
             const hasHum = latest && latest.humidity != null;
             const hasPress = latest && latest.pressure != null;
-            const temp = hasTemp ? latest.temperature.toFixed(1) : '--';
+            
+            // Apply unit conversions
+            const temp = hasTemp ? convertTemperature(latest.temperature, tempUnit).toFixed(1) : '--';
+            const tempDisplayLabel = tempUnit === 'fahrenheit' ? '°F' : '°C';
+            
             const hum = hasHum ? latest.humidity.toFixed(1) : '--';
-            const press = hasPress ? latest.pressure.toFixed(1) : '--';
+            const press = hasPress ? convertPressure(latest.pressure, pressUnit).toFixed(1) : '--';
+            const pressDisplayLabel = getPressureUnitLabel(pressUnit);
+            
             const timestamp = latest ? new Date(latest.timestamp) : null;
-            const timeStr = timestamp ? timestamp.toLocaleTimeString() : 'нет данных';
+            // Apply timezone adjustment to display time
+            let timeStr = 'нет данных';
+            if (timestamp) {
+                const adjustedTime = new Date(timestamp.getTime() + timezoneAdjustment * 60000);
+                timeStr = adjustedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            
             let status = '🟢 онлайн';
             if (timestamp) {
-                const diffSeconds = Math.floor((new Date() - timestamp) / 1000);
-                if (diffSeconds > 60) status = '🔴 оффлайн';
+                const now = new Date();
+                const diffSeconds = Math.floor((now - timestamp) / 1000);
+                if (diffSeconds > offlineTimeout) status = '🔴 оффлайн';
             } else status = '⚫ нет данных';
+            
             gridHtml += `
                 <div class="sensor-tile" data-device="${escapeHtml(deviceName)}" onclick="showDetailView('${escapeHtml(deviceName)}')">
                     <div class="tile-header">
@@ -110,9 +165,9 @@ async function loadGridData() {
                         <span class="tile-status">${status}</span>
                     </div>
                     <div class="tile-metrics">
-                        ${hasTemp ? `<div class="tile-metric"><span class="tile-metric-label">🌡️ Температура</span><span class="tile-metric-value">${temp}<span class="tile-metric-unit">°C</span></span></div>` : ''}
+                        ${hasTemp ? `<div class="tile-metric"><span class="tile-metric-label">🌡️ Температура</span><span class="tile-metric-value">${temp}<span class="tile-metric-unit">${tempDisplayLabel}</span></span></div>` : ''}
                         ${hasHum ? `<div class="tile-metric"><span class="tile-metric-label">💧 Влажность</span><span class="tile-metric-value">${hum}<span class="tile-metric-unit">%</span></span></div>` : ''}
-                        ${hasPress ? `<div class="tile-metric"><span class="tile-metric-label">⏲️ Давление</span><span class="tile-metric-value">${press}<span class="tile-metric-unit">гПа</span></span></div>` : ''}
+                        ${hasPress ? `<div class="tile-metric"><span class="tile-metric-label">⏲️ Давление</span><span class="tile-metric-value">${press}<span class="tile-metric-unit">${pressDisplayLabel}</span></span></div>` : ''}
                     </div>
                     <div class="tile-update-time">🕐 ${timeStr}</div>
                 </div>
@@ -162,20 +217,24 @@ async function loadDevices() {
 
         const latestMap = {};
         latestData.forEach(item => { latestMap[item.device_name] = item; });
+        
+        // Get offline timeout from settings
+        const offlineTimeout = (window.systemConfig && window.systemConfig.offlineTimeout) || 60;
+        
         container.innerHTML = '';
         sortedDevices.forEach(device => {
             const deviceName = typeof device === 'string' ? device : device.device_name;
             const displayName = typeof device === 'string' ? device : device.display_name;
             const latest = latestMap[deviceName];
 
-            // Определяем статус датчика
+            // Determine status with custom timeout
             let statusIcon = '🔴'; // красный - оффлайн
             let statusColor = '#ef4444';
             if (latest) {
                 const updatedAt = new Date(latest.timestamp);
                 const now = new Date();
                 const diffSeconds = Math.floor((now - updatedAt) / 1000);
-                if (diffSeconds < 60) {
+                if (diffSeconds < offlineTimeout) {
                     statusIcon = '🟢'; // зеленый - онлайн
                     statusColor = '#10b981';
                 }
@@ -240,8 +299,12 @@ async function loadLatestData(deviceName) {
                 sensorNameEl.style.cursor = 'default';
             }
 
-            // Сохраняем выбранную метрику до обновления списка
-            const previousMetric = currentMetric;
+            // Получаем настройки
+            const tempUnit = (window.systemConfig && window.systemConfig.tempUnit) || 'celsius';
+            const pressUnit = (window.systemConfig && window.systemConfig.pressureUnit) || 'hpa';
+            const timezoneOffset = getTimezoneOffset((window.systemConfig && window.systemConfig.timezone) || 'UTC+4');
+            const serverOffset = 240; // server is UTC+4
+            const timezoneAdjustment = timezoneOffset - serverOffset;
 
             // Обновляем селект метрик в зависимости от доступных данных
             const metricSelect = document.getElementById('metricType');
@@ -249,23 +312,13 @@ async function loadLatestData(deviceName) {
             const hasHum = latest.humidity != null;
             const hasPress = latest.pressure != null;
 
-            const metricMap = [
-                { value: 'temperature', label: 'Температура', icon: '🌡️' },
-                { value: 'humidity', label: 'Влажность', icon: '💧' },
-                { value: 'pressure', label: 'Давление', icon: '⏲️' }
-            ];
-
             metricSelect.innerHTML = '';
-            if (hasTemp) metricSelect.innerHTML += `<option value="temperature">🌡️ Температура</option>`;
-            if (hasHum) metricSelect.innerHTML += `<option value="humidity">💧 Влажность</option>`;
-            if (hasPress) metricSelect.innerHTML += `<option value="pressure">⏲️ Давление</option>`;
+            if (hasTemp) metricSelect.innerHTML += `<option value="temperature">🌡️ Температура (${tempUnit === 'fahrenheit' ? '°F' : '°C'})</option>`;
+            if (hasHum) metricSelect.innerHTML += `<option value="humidity">💧 Влажность (%)</option>`;
+            if (hasPress) metricSelect.innerHTML += `<option value="pressure">⏲️ Давление (${getPressureUnitLabel(pressUnit)})</option>`;
 
-            // Восстанавливаем предыдущую метрику, если она всё ещё доступна
-            if (previousMetric && metricSelect.querySelector(`option[value="${previousMetric}"]`)) {
-                currentMetric = previousMetric;
-                metricSelect.value = currentMetric;
-            } else if (metricSelect.options.length > 0) {
-                // Иначе выбираем первую доступную
+            // Если текущая метрика недоступна, выбираем первую доступную
+            if (!metricSelect.querySelector(`option[value="${currentMetric}"]`) && metricSelect.options.length > 0) {
                 currentMetric = metricSelect.options[0].value;
                 metricSelect.value = currentMetric;
             }
@@ -277,19 +330,31 @@ async function loadLatestData(deviceName) {
             document.querySelector('.metric-hum').style.display = hasHum ? 'block' : 'none';
             document.querySelector('.metric-press').style.display = hasPress ? 'block' : 'none';
 
-            document.getElementById('tempVal').innerHTML = latest.temperature != null ? latest.temperature.toFixed(1) : '--';
-            document.getElementById('humVal').innerHTML = latest.humidity != null ? latest.humidity.toFixed(1) : '--';
-            document.getElementById('pressVal').innerHTML = latest.pressure != null ? latest.pressure.toFixed(1) : '--';
-            const updateTime = new Date(latest.timestamp);
+            // Применяем конвертацию единиц
+            document.getElementById('tempVal').innerHTML = hasTemp ? convertTemperature(latest.temperature, tempUnit).toFixed(1) + (tempUnit === 'fahrenheit' ? ' °F' : ' °C') : '--';
+            document.getElementById('humVal').innerHTML = hasHum ? latest.humidity.toFixed(1) + ' %' : '--';
+            document.getElementById('pressVal').innerHTML = hasPress ? convertPressure(latest.pressure, pressUnit).toFixed(1) + ' ' + getPressureUnitLabel(pressUnit) : '--';
+            
+            // Adjust timestamp to selected timezone for display
+            const originalUpdateTime = new Date(latest.timestamp);
+            // Use timezoneAdjustment to convert from server timezone to selected timezone
+            const displayTime = new Date(originalUpdateTime.getTime() + timezoneAdjustment * 60000);
+            
             const now = new Date();
-            const diffSeconds = Math.floor((now - updateTime) / 1000);
+            const diffSeconds = Math.floor((now - originalUpdateTime) / 1000);
             const statusEl = document.getElementById('liveStatus');
-            if (diffSeconds < 60) { statusEl.innerHTML = 'онлайн'; statusEl.style.background = '#10b981'; }
-            else { statusEl.innerHTML = `${Math.floor(diffSeconds / 60)} мин назад`; statusEl.style.background = '#ef4444'; }
+            if (diffSeconds < (window.systemConfig && window.systemConfig.offlineTimeout || 60)) { 
+                statusEl.innerHTML = 'онлайн'; 
+                statusEl.style.background = '#10b981'; 
+            }
+            else { 
+                statusEl.innerHTML = `${Math.floor(diffSeconds / 60)} мин назад`; 
+                statusEl.style.background = '#ef4444'; 
+            }
             
             const timeEl = document.getElementById('liveUpdateTime');
             timeEl.style.display = 'block';
-            timeEl.innerHTML = updateTime.toLocaleTimeString();
+            timeEl.innerHTML = displayTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         } else {
             document.getElementById('currentSensorName').innerHTML = `${escapeHtml(deviceName)} (нет данных)`;
             document.getElementById('tempVal').innerHTML = '--'; 

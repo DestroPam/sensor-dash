@@ -60,7 +60,7 @@ function showDetailView(deviceName) {
 
 function startAutoUpdate() {
     if (updateInterval) clearInterval(updateInterval);
-    console.log('⏱️ Запуск интервала автообновления (каждые 3 секунды)');
+    console.log('Запуск интервала автообновления (каждые 3 секунды)');
     
     // Первое обновление нужно сделать сразу
     (async () => {
@@ -163,6 +163,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('✅ Порядок датчиков загружен');
     } catch (error) {
         console.error('❌ Ошибка загрузки порядка датчиков (продолжаем):', error);
+    }
+    
+    // Загружаем системные настройки
+    try {
+        await loadSystemConfig();
+        console.log('✅ Системные настройки загружены');
+    } catch (error) {
+        console.error('❌ Ошибка загрузки системных настроек (продолжаем):', error);
     }
     
     // Загружаем данные с таймаутом
