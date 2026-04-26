@@ -240,25 +240,32 @@ async function loadLatestData(deviceName) {
                 sensorNameEl.style.cursor = 'default';
             }
 
+            // Сохраняем выбранную метрику до обновления списка
+            const previousMetric = currentMetric;
+
             // Обновляем селект метрик в зависимости от доступных данных
             const metricSelect = document.getElementById('metricType');
             const hasTemp = latest.temperature != null;
             const hasHum = latest.humidity != null;
             const hasPress = latest.pressure != null;
-            
+
             const metricMap = [
                 { value: 'temperature', label: 'Температура', icon: '🌡️' },
                 { value: 'humidity', label: 'Влажность', icon: '💧' },
                 { value: 'pressure', label: 'Давление', icon: '⏲️' }
             ];
-            
+
             metricSelect.innerHTML = '';
             if (hasTemp) metricSelect.innerHTML += `<option value="temperature">🌡️ Температура</option>`;
             if (hasHum) metricSelect.innerHTML += `<option value="humidity">💧 Влажность</option>`;
             if (hasPress) metricSelect.innerHTML += `<option value="pressure">⏲️ Давление</option>`;
-            
-            // Если текущая метрика недоступна, выбираем первую доступную
-            if (!metricSelect.querySelector(`option[value="${currentMetric}"]`) && metricSelect.options.length > 0) {
+
+            // Восстанавливаем предыдущую метрику, если она всё ещё доступна
+            if (previousMetric && metricSelect.querySelector(`option[value="${previousMetric}"]`)) {
+                currentMetric = previousMetric;
+                metricSelect.value = currentMetric;
+            } else if (metricSelect.options.length > 0) {
+                // Иначе выбираем первую доступную
                 currentMetric = metricSelect.options[0].value;
                 metricSelect.value = currentMetric;
             }
