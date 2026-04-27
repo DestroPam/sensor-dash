@@ -32,21 +32,13 @@
             </div>
         </div>
 
-        <!-- Sidebar Menu - fixed left -->
-        <nav class="admin-sidebar" id="adminSidebar" style="display: none;">
-            <button class="admin-menu-item" data-target="section-stats">Статистика</button>
-            <button class="admin-menu-item" data-target="section-account">Аккаунт</button>
-            <button class="admin-menu-item" data-target="section-data">Данные</button>
-            <button class="admin-menu-item" data-target="section-import">Импорт/Экспорт</button>
-        </nav>
-
         <div id="adminTools" class="admin-tools" style="display: none;">
             <!-- Sections -->
             <div class="admin-content">
                 <!-- Statistics Section -->
                 <section id="section-stats" class="admin-section admin-stats-section">
                     <h3>Статистика</h3>
-                    <div class="admin-stats">
+                    <div class="admin-sections">
                         <div class="stat-card">
                             <span class="stat-label">Всего датчиков:</span>
                             <span class="stat-value" id="activeSensorsCount">--</span>
@@ -64,30 +56,28 @@
 
                     <div class="admin-subsection">
                         <h4>Сменить пароль</h4>
-                        <input type="password" id="currentPassword" placeholder="Текущий пароль" class="admin-input" style="margin-bottom: 8px;">
-                        <input type="password" id="newPassword" placeholder="Новый пароль" class="admin-input" style="margin-bottom: 8px;">
-                        <input type="password" id="confirmNewPassword" placeholder="Подтвердите новый пароль" class="admin-input" style="margin-bottom: 10px;">
+                        <input type="password" id="currentPassword" placeholder="Текущий пароль" class="admin-input">
+                        <input type="password" id="newPassword" placeholder="Новый пароль" class="admin-input">
+                        <input type="password" id="confirmNewPassword" placeholder="Подтвердите новый пароль" class="admin-input">
                         <button id="adminChangePasswordBtn" class="admin-btn">Изменить пароль</button>
-                        <div id="passwordChangeMessage" class="admin-message" style="margin-top: 10px;"></div>
+                        <div id="passwordChangeMessage" class="admin-message"></div>
                     </div>
 
                     <!-- System Settings -->
-                    <div class="admin-subsection" style="margin-top: 30px;">
+                    <div class="admin-subsection">
                         <h4>Настройки системы</h4>
-                        
-                        <!-- Temperature unit -->
+
                         <div class="setting-row">
                             <label for="tempUnitSetting">Единицы температуры:</label>
-                            <select id="tempUnitSetting" class="admin-select" style="width: 200px;">
+                            <select id="tempUnitSetting" class="admin-select">
                                 <option value="celsius">Цельсий (°C)</option>
                                 <option value="fahrenheit">Фаренгейт (°F)</option>
                             </select>
                         </div>
 
-                        <!-- Pressure unit -->
                         <div class="setting-row">
                             <label for="pressUnitSetting">Единицы давления:</label>
-                            <select id="pressUnitSetting" class="admin-select" style="width: 200px;">
+                            <select id="pressUnitSetting" class="admin-select">
                                 <option value="hpa">Гектопаскали (гПа)</option>
                                 <option value="mmhg">Миллиметры ртутного столба</option>
                                 <option value="inhg">Дюймы ртутного столба</option>
@@ -95,10 +85,9 @@
                             </select>
                         </div>
 
-                        <!-- Timezone -->
                         <div class="setting-row">
                             <label for="timezoneSetting">Часовой пояс:</label>
-                            <select id="timezoneSetting" class="admin-select" style="width: 200px;">
+                            <select id="timezoneSetting" class="admin-select">
                                 <option value="UTC-11">UTC-11 (Мидуэй)</option>
                                 <option value="UTC-10">UTC-10 (Гавайи)</option>
                                 <option value="UTC-9">UTC-9 (Аляска)</option>
@@ -126,16 +115,15 @@
                             </select>
                         </div>
 
-                        <!-- Offline timeout -->
                         <div class="setting-row">
                             <label for="offlineTimeoutSetting">Таймаут "офлайн" (сек):</label>
-                            <input type="number" id="offlineTimeoutSetting" class="admin-input" style="width: 120px;" min="5" max="3600" value="60">
-                            <span style="color: #64748b; font-size: 0.85rem; margin-left: 10px;">Датчик считается оффлайн, если нет данных дольше N секунд</span>
+                            <input type="number" id="offlineTimeoutSetting" class="admin-input" min="5" max="3600" value="60">
+                            <span style="color: #64748b; font-size: 0.85rem;">Датчик считается оффлайн, если нет данных дольше N секунд</span>
                         </div>
 
                         <div style="margin-top: 15px;">
                             <button id="adminSaveSettingsBtn" class="admin-btn">Сохранить настройки</button>
-                            <div id="settingsMessage" class="admin-message" style="margin-top: 8px;"></div>
+                            <div id="settingsMessage" class="admin-message"></div>
                         </div>
                     </div>
                 </section>
@@ -154,14 +142,14 @@
                             <input type="datetime-local" id="adminEndDate" class="admin-input" placeholder="Конечная дата">
                         </div>
                         <button id="adminDeleteDataBtn" class="admin-btn danger">Удалить данные</button>
-                        <div id="deleteDataMessage" class="admin-message" style="margin-top: 10px;"></div>
+                        <div id="deleteDataMessage" class="admin-message"></div>
                     </div>
 
                     <div class="admin-subsection">
                         <h4>Удалить ВСЕ данные</h4>
                         <p style="color: #ef4444; font-size: 0.9rem; margin-bottom: 10px;">Это действие необратимо!</p>
                         <button id="adminDeleteAllBtn" class="admin-btn danger">Удалить все данные</button>
-                        <div id="deleteAllMessage" class="admin-message" style="margin-top: 10px;"></div>
+                        <div id="deleteAllMessage" class="admin-message"></div>
                     </div>
                 </section>
 
@@ -170,16 +158,13 @@
                     <h3>Импорт / Экспорт данных</h3>
                     <div class="admin-subsection">
                         <h4>Экспорт</h4>
-                        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 10px;">Выгрузить все данные датчиков
-                            и их имена в JSON файл</p>
+                        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 10px;">Выгрузить все данные датчиков и их имена в JSON файл</p>
                         <button id="adminExportBtn" class="admin-btn">Экспортировать JSON</button>
                     </div>
                     <div class="admin-subsection">
                         <h4>Импорт</h4>
-                        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 10px;">Загрузить данные из JSON
-                            файла (добавляет к существующим)</p>
-                        <input type="file" id="adminImportFile" accept=".json" class="admin-input"
-                            style="margin-bottom: 10px;">
+                        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 10px;">Загрузить данные из JSON файла (добавляет к существующим)</p>
+                        <input type="file" id="adminImportFile" accept=".json" class="admin-input">
                         <button id="adminImportBtn" class="admin-btn">Импортировать JSON</button>
                     </div>
                 </section>

@@ -60,8 +60,12 @@ function loadDeviceOrder() {
 }
 
 function saveDeviceOrder(items, location) {
-    const deviceOrder = Array.from(items).map(item => item.getAttribute('data-device') ||
-        item.querySelector('.tile-device-name')?.textContent?.replace('📌 ', '') || '');
+    const deviceOrder = Array.from(items).map(item => {
+        const nameEl = item.querySelector('.tile-device-name');
+        let name = nameEl ? nameEl.textContent : '';
+        if (name.startsWith('📌 ')) name = name.substring(2);
+        return name;
+    });
 
     // Удаляем дубликаты
     const uniqueOrder = [...new Set(deviceOrder)];
@@ -111,7 +115,7 @@ async function loadGridData() {
         const container = document.getElementById('sensorsGrid');
         if (sortedDevices.length === 0) {
             console.log('⚠️ Нет данных датчиков');
-            container.innerHTML = '<div class="empty-grid">📭 Нет данных<br>Запустите эмулятор датчиков</div>';
+            container.innerHTML = '<div class="empty-grid">Нет данных<br>Запустите эмулятор датчиков</div>';
             return;
         }
 
@@ -135,12 +139,12 @@ async function loadGridData() {
             const hasHum = latest && latest.humidity != null;
             const hasPress = latest && latest.pressure != null;
             
-            // Apply unit conversions
-            const temp = hasTemp ? convertTemperature(latest.temperature, tempUnit).toFixed(1) : '--';
-            const tempDisplayLabel = tempUnit === 'fahrenheit' ? '°F' : '°C';
-            
-            const hum = hasHum ? latest.humidity.toFixed(1) : '--';
-            const press = hasPress ? convertPressure(latest.pressure, pressUnit).toFixed(1) : '--';
+             // Apply unit conversions
+             const temp = hasTemp ? convertTemperature(latest.temperature, tempUnit).toFixed(1) : '--';
+             const tempDisplayLabel = tempUnit === 'fahrenheit' ? '°F' : '°C';
+
+             const hum = hasHum ? latest.humidity.toFixed(1) : '--';
+             const press = hasPress ? convertPressure(latest.pressure, pressUnit).toFixed(1) : '--';
             const pressDisplayLabel = getPressureUnitLabel(pressUnit);
             
             const timestamp = latest ? new Date(latest.timestamp) : null;
@@ -165,11 +169,11 @@ async function loadGridData() {
                         <span class="tile-status">${status}</span>
                     </div>
                     <div class="tile-metrics">
-                        ${hasTemp ? `<div class="tile-metric"><span class="tile-metric-label">🌡️ Температура</span><span class="tile-metric-value">${temp}<span class="tile-metric-unit">${tempDisplayLabel}</span></span></div>` : ''}
-                        ${hasHum ? `<div class="tile-metric"><span class="tile-metric-label">💧 Влажность</span><span class="tile-metric-value">${hum}<span class="tile-metric-unit">%</span></span></div>` : ''}
-                        ${hasPress ? `<div class="tile-metric"><span class="tile-metric-label">⏲️ Давление</span><span class="tile-metric-value">${press}<span class="tile-metric-unit">${pressDisplayLabel}</span></span></div>` : ''}
+                        ${hasTemp ? `<div class="tile-metric"><span class="tile-metric-label">Температура</span><span class="tile-metric-value">${temp}<span class="tile-metric-unit">${tempDisplayLabel}</span></span></div>` : ''}
+                        ${hasHum ? `<div class="tile-metric"><span class="tile-metric-label">Влажность</span><span class="tile-metric-value">${hum}<span class="tile-metric-unit">%</span></span></div>` : ''}
+                        ${hasPress ? `<div class="tile-metric"><span class="tile-metric-label">Давление</span><span class="tile-metric-value">${press}<span class="tile-metric-unit">${pressDisplayLabel}</span></span></div>` : ''}
                     </div>
-                    <div class="tile-update-time">🕐 ${timeStr}</div>
+                    <div class="tile-update-time">${timeStr}</div>
                 </div>
             `;
         });
@@ -180,7 +184,7 @@ async function loadGridData() {
         console.error('❌ Ошибка загрузки сетки:', error);
         const container = document.getElementById('sensorsGrid');
         if (container) {
-            container.innerHTML = '<div class="empty-grid">❌ Ошибка загрузки данных<br>' + error.message + '</div>';
+            container.innerHTML = '<div class="empty-grid">Ошибка загрузки данных<br>' + error.message + '</div>';
         }
     }
 }
@@ -275,7 +279,7 @@ async function loadDevices() {
         console.error('❌ Ошибка загрузки устройств:', error);
         const container = document.getElementById('sensorsList');
         if (container) {
-            container.innerHTML = '<div style="text-align: center; padding: 20px; color: #ef4444;">❌ Ошибка загрузки<br>' + error.message + '</div>';
+            container.innerHTML = '<div style="text-align: center; padding: 20px; color: #ef4444;">Ошибка загрузки<br>' + error.message + '</div>';
         }
     }
 }
@@ -291,7 +295,7 @@ async function loadLatestData(deviceName) {
             const sensorNameEl = document.getElementById('currentSensorName');
             // Если пользователь редактирует имя (есть input), не трогаем элемент
             if (!sensorNameEl.querySelector('input')) {
-                sensorNameEl.innerHTML = `📌 ${escapeHtml(displayName)}`;
+                sensorNameEl.textContent = displayName;
                 sensorNameEl.ondblclick = (e) => {
                     e.stopPropagation();
                     startEditDetailSensorName(deviceName, displayName, sensorNameEl);
@@ -313,9 +317,9 @@ async function loadLatestData(deviceName) {
             const hasPress = latest.pressure != null;
 
             metricSelect.innerHTML = '';
-            if (hasTemp) metricSelect.innerHTML += `<option value="temperature">🌡️ Температура (${tempUnit === 'fahrenheit' ? '°F' : '°C'})</option>`;
-            if (hasHum) metricSelect.innerHTML += `<option value="humidity">💧 Влажность (%)</option>`;
-            if (hasPress) metricSelect.innerHTML += `<option value="pressure">⏲️ Давление (${getPressureUnitLabel(pressUnit)})</option>`;
+            if (hasTemp) metricSelect.innerHTML += `<option value="temperature">Температура (${tempUnit === 'fahrenheit' ? '°F' : '°C'})</option>`;
+            if (hasHum) metricSelect.innerHTML += `<option value="humidity">Влажность (%)</option>`;
+            if (hasPress) metricSelect.innerHTML += `<option value="pressure">Давление (${getPressureUnitLabel(pressUnit)})</option>`;
 
             // Устанавливаем значение select в соответствии с currentMetric
             if (metricSelect.options.length > 0) {
@@ -487,22 +491,22 @@ function startEditDetailSensorName(deviceName, oldDisplayName, nameElement) {
             const newName = input.value;
             if (newName !== oldDisplayName) {
                 const success = await saveSensorName(deviceName, newName);
-                if (success) {
-                    nameElement.innerHTML = `📌 ${escapeHtml(newName)}`;
-                } else {
-                    nameElement.innerHTML = `📌 ${escapeHtml(oldDisplayName)}`;
-                }
+            if (success) {
+                nameElement.textContent = newName;
             } else {
-                nameElement.innerHTML = `📌 ${escapeHtml(oldDisplayName)}`;
+                nameElement.textContent = oldDisplayName;
             }
-        } else if (e.key === 'Escape') {
-            nameElement.innerHTML = `📌 ${escapeHtml(oldDisplayName)}`;
+        } else {
+            nameElement.textContent = oldDisplayName;
         }
+    } else if (e.key === 'Escape') {
+        nameElement.textContent = oldDisplayName;
+    }
     };
 
     // Обработчик потери фокуса - отмена редактирования
     input.onblur = () => {
-        nameElement.innerHTML = `📌 ${escapeHtml(oldDisplayName)}`;
+        nameElement.textContent = oldDisplayName;
     };
 }
 

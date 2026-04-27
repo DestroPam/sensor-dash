@@ -45,6 +45,7 @@ function showGridView() {
     document.getElementById('detailView').style.display = 'none';
     currentDevice = null;
     loadGridData();
+    updateMobileBackButton();
 }
 
 function showDetailView(deviceName) {
@@ -56,6 +57,19 @@ function showDetailView(deviceName) {
     loadLatestData(deviceName);
     checkAndStartLiveMode();
     loadChartData(deviceName);
+    updateMobileBackButton();
+}
+
+function updateMobileBackButton() {
+    const mobileBackBtn = document.getElementById('mobileBackToGridBtn');
+    if (!mobileBackBtn) return;
+
+    const isMobile = window.innerWidth <= 576;
+    if (isMobile && viewMode === 'detail') {
+        mobileBackBtn.style.display = 'block';
+    } else {
+        mobileBackBtn.style.display = 'none';
+    }
 }
 
 function startAutoUpdate() {
@@ -104,6 +118,20 @@ function setupEventListeners() {
         stopLiveChartUpdates();
         showGridView();
     };
+
+    // Mobile-only back button in detail view
+    const mobileBackBtn = document.getElementById('mobileBackToGridBtn');
+    if (mobileBackBtn) {
+        mobileBackBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            stopLiveChartUpdates();
+            showGridView();
+        });
+        console.log('✅ Mobile back button handler attached');
+    } else {
+        console.warn('⚠️ Mobile back button not found');
+    }
+
     document.getElementById('refreshChartBtn').onclick = () => {
         if (currentDevice) loadChartData(currentDevice);
     };
@@ -195,6 +223,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Запускаем автообновление ВСЕ РАВНО, даже если была ошибка
     startAutoUpdate();
     console.log('✅ Приложение готово к работе');
+
+    // Update mobile back button on resize
+    window.addEventListener('resize', updateMobileBackButton);
 });
 
 // Обработчик для кнопки "Назад" в браузере - перезагружаем настройки при возврате на страницу

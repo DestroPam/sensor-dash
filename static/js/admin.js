@@ -99,9 +99,8 @@ async function loadDevices() {
     try {
         const response = await fetch('/api/devices');
         const devicesData = await response.json();
-        const deviceNames = devicesData.map(d => typeof d === 'string' ? d : d.device_name);
         if (typeof updateAdminDeviceLists === 'function') {
-            updateAdminDeviceLists(deviceNames);
+            updateAdminDeviceLists(devicesData);
         }
     } catch (error) {
         console.error('Ошибка загрузки устройств:', error);
@@ -166,7 +165,6 @@ async function adminLogin() {
             errorDiv.style.display = 'none';
             document.getElementById('loginForm').style.display = 'none';
             document.getElementById('adminTools').style.display = 'flex';
-            document.getElementById('adminSidebar').style.display = 'flex';
             await loadDevices();
             await loadStatistics();
             await loadSettings();
@@ -188,7 +186,6 @@ async function adminLogout() {
         if (isAdminPage) {
             document.getElementById('loginForm').style.display = 'flex';
             document.getElementById('adminTools').style.display = 'none';
-            document.getElementById('adminSidebar').style.display = 'none';
             document.getElementById('adminUsername').value = '';
             document.getElementById('adminPassword').value = '';
             console.log('Выход выполнен');
@@ -430,11 +427,9 @@ async function checkAdminStatus() {
             if (!isAdmin) {
                 document.getElementById('loginForm').style.display = 'flex';
                 document.getElementById('adminTools').style.display = 'none';
-                document.getElementById('adminSidebar').style.display = 'none';
             } else {
                 document.getElementById('loginForm').style.display = 'none';
                 document.getElementById('adminTools').style.display = 'flex';
-                document.getElementById('adminSidebar').style.display = 'flex';
                 await loadDevices();
                 await loadStatistics();
             }
@@ -460,7 +455,7 @@ if (isAdminPage) {
         const adminChangePasswordBtn = document.getElementById('adminChangePasswordBtn');
         const adminSaveSettingsBtn = document.getElementById('adminSaveSettingsBtn');
 
-        if (navBackBtn) navBackBtn.onclick = () => window.history.back();
+        if (navBackBtn) navBackBtn.onclick = () => window.location.href = '/';
         if (navLogoutBtn) navLogoutBtn.onclick = adminLogout;
         if (adminLoginBtn) adminLoginBtn.onclick = adminLogin;
         if (adminDeleteDataBtn) adminDeleteDataBtn.onclick = adminDeleteData;
@@ -505,16 +500,6 @@ if (isAdminPage) {
         });
         document.getElementById('confirmNewPassword').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') adminChangePassword();
-        });
-
-        document.querySelectorAll('.admin-menu-item').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const targetId = btn.dataset.target;
-                const target = document.getElementById(targetId);
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            });
         });
     });
 }

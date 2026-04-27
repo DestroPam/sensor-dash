@@ -135,7 +135,8 @@ function updateAdminDeviceLists(devices) {
 
     const options = devices.map(d => {
         const deviceName = typeof d === 'string' ? d : d.device_name;
-        return `<option value="${escapeHtml(deviceName)}">${escapeHtml(deviceName)}</option>`;
+        const displayName = (typeof d === 'object' && d.display_name) ? d.display_name : deviceName;
+        return `<option value="${escapeHtml(deviceName)}">${escapeHtml(displayName)}</option>`;
     }).join('');
 
     if (deviceSelect) deviceSelect.innerHTML = options;

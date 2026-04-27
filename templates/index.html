@@ -36,7 +36,7 @@
             <div id="gridView">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2>Текущие показания</h2>
-                    <span style="font-size: 0.8rem; color: #64748b;">Нажмите на карточку для детальной статистики</span>
+                    <span class="hide-on-mobile" style="font-size: 0.8rem; color: #64748b;">Нажмите на карточку для детальной статистики</span>
                 </div>
                 <div id="sensorsGrid" class="sensors-grid">
                     <div class="empty-grid">Загрузка данных...</div>
@@ -45,6 +45,8 @@
 
             <div id="detailView" style="display: none;">
                 <div class="detail-header">
+                    <button id="mobileBackToGridBtn" type="button" class="back-button mobile-only-back" style="display: none;">← Назад к списку</button>
+                    <h2 id="detailSensorName">Датчик</h2>
                 </div>
 
                 <div class="live-data">
@@ -95,12 +97,30 @@
         </div>
     </div>
 
-    <!-- Подключаем все JavaScript файлы -->
-    <script src="/static/js/utils.js"></script>
-    <script src="/static/js/api.js"></script>
-    <script src="/static/js/dragdrop.js"></script>
-    <script src="/static/js/chart.js"></script>
-    <script src="/static/js/app.js"></script>
+     <!-- Подключаем все JavaScript файлы -->
+     <script src="/static/js/utils.js"></script>
+     <script src="/static/js/api.js"></script>
+     <script src="/static/js/dragdrop.js"></script>
+     <script src="/static/js/chart.js"></script>
+     <script src="/static/js/app.js"></script>
+
+     <script>
+         // Adjust chart canvas height for mobile on load and resize
+         function adjustChartForMobile() {
+             const canvas = document.getElementById('mainChart');
+             if (!canvas) return;
+             if (window.innerWidth <= 576) {
+                 canvas.height = 280;
+             } else if (window.innerWidth <= 900) {
+                 canvas.height = 320;
+             } else {
+                 canvas.height = 350;
+             }
+         }
+
+         window.addEventListener('load', adjustChartForMobile);
+         window.addEventListener('resize', adjustChartForMobile);
+     </script>
 
 </body>
 

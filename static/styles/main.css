@@ -342,15 +342,23 @@ body {
     align-items: center;
 }
 
-select,
+/* Button base styles with consistent height */
+.nav-button,
 button,
-input {
-    padding: 10px 16px;
-    border-radius: 40px;
-    border: 1px solid #cbd5e1;
-    background: white;
-    font-weight: 500;
-    cursor: pointer;
+.admin-btn,
+.back-button {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Ensure all buttons have consistent height across the app */
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"] {
+    min-height: 44px;
 }
 
 button {
@@ -457,42 +465,296 @@ hr {
     }
 }
 
-@media (max-width: 900px) {
-    .sensors-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .dashboard {
-        flex-direction: column;
-        padding: 15px;
-    }
-
-    .sensors-panel {
-        max-width: 100%;
-    }
-
-    .main-panel {
-        min-width: auto;
-    }
-
+/* Mobile Styles (Smartphones) */
+@media (max-width: 576px) {
+    /* Navbar */
     .navbar {
-        padding: 10px 15px;
+        padding: 8px 12px;
     }
 
     .navbar-container {
         flex-direction: column;
-        gap: 10px;
+        gap: 8px;
+    }
+
+    .navbar-title {
+        font-size: 1.1rem;
     }
 
     .navbar-buttons {
+        justify-content: center;
+        gap: 6px;
         width: 100%;
-        justify-content: flex-end;
-        flex-wrap: wrap;
     }
 
     .nav-button {
-        padding: 6px 12px;
-        font-size: 0.8rem;
+        padding: 6px 10px;
+        font-size: 0.75rem;
+        border-radius: 30px;
+    }
+
+    /* Dashboard */
+    .dashboard {
+        padding: 10px;
+        gap: 16px;
+    }
+
+    /* Hide sensors panel on mobile - use grid only */
+    .sensors-panel {
+        display: none;
+    }
+
+    .main-panel {
+        padding: 16px;
+        min-width: 100%;
+    }
+
+    /* Sensors grid - keep original grid but single column on mobile */
+    .sensors-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .sensor-tile {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border-radius: 24px;
+        padding: 16px;
+        color: white;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: pointer;
+        min-height: auto;
+    }
+
+    .sensor-tile:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .tile-header {
+        margin-bottom: 12px;
+    }
+
+    .tile-device-name {
+        font-size: 1rem;
+        font-weight: 700;
+        word-break: break-word;
+        line-height: 1.3;
+    }
+
+    .tile-status {
+        font-size: 0.7rem;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 4px 10px;
+        border-radius: 20px;
+        display: inline-block;
+    }
+
+    .tile-metrics {
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 10px;
+    }
+
+    .tile-metric {
+        flex: 1;
+        min-width: 30%;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+    }
+
+    .tile-metric-label {
+        font-size: 0.75rem;
+        opacity: 0.9;
+    }
+
+    .tile-metric-value {
+        font-size: 1.3rem;
+        font-weight: 800;
+    }
+
+    .tile-metric-unit {
+        font-size: 0.7rem;
+        opacity: 0.8;
+    }
+
+    .tile-update-time {
+        font-size: 0.65rem;
+        opacity: 0.7;
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    /* Empty grid */
+    .empty-grid {
+        padding: 30px 20px;
+        font-size: 0.9rem;
+    }
+
+    /* Detail view */
+    .live-data {
+        padding: 16px;
+    }
+
+    .live-title {
+        font-size: 1.1rem;
+        margin-bottom: 12px;
+    }
+
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 3px 10px;
+    }
+
+    .sensor-metrics {
+        gap: 12px;
+    }
+
+    .metric {
+        padding: 10px 14px;
+        min-width: 90px;
+    }
+
+    .metric-value {
+        font-size: 1.6rem;
+    }
+
+    .metric-unit {
+        font-size: 0.75rem;
+    }
+
+    #liveUpdateTime {
+        font-size: 0.75rem;
+        margin-top: 12px;
+    }
+
+    /* Controls */
+    .controls {
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    select,
+    button,
+    input {
+        padding: 10px 14px;
+        font-size: 0.9rem;
+        border-radius: 30px;
+    }
+
+    select {
+        min-height: 42px;
+    }
+
+    #refreshChartBtn {
+        width: 100%;
+        margin-top: 8px;
+    }
+
+    #customDateRange {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    #customDateRange input {
+        width: 100%;
+    }
+
+    #applyCustomRange {
+        width: 100%;
+    }
+
+    /* Chart */
+    .chart-container {
+        min-height: 280px;
+        margin: 16px 0;
+    }
+
+    #mainChart {
+        height: 280px !important;
+    }
+
+    /* Hide less important elements on mobile */
+    .hide-on-mobile {
+        display: none !important;
+    }
+
+     /* Detail header spacing */
+     .detail-header {
+         margin-bottom: 16px;
+     }
+
+     /* Mobile back button - hidden by default, JS controls visibility */
+     #mobileBackToGridBtn {
+         display: none;
+         width: 100%;
+         margin-bottom: 12px;
+         padding: 14px 20px;
+         font-size: 1rem;
+         text-align: center;
+     }
+
+     /* Mobile navbar - center buttons, larger login */
+     .navbar-buttons {
+         display: flex;
+         flex-direction: column;
+         align-items: center;
+         gap: 8px;
+     }
+
+     .nav-button {
+         width: 100%;
+         max-width: 300px;
+         padding: 12px 20px;
+         font-size: 1rem;
+         border-radius: 30px;
+         text-align: center;
+     }
+
+     #navLoginBtn {
+         background: #3b82f6;
+         font-weight: 600;
+     }
+}
+
+/* Ensure mobile back button hidden on desktop */
+@media (min-width: 577px) {
+    #mobileBackToGridBtn {
+        display: none !important;
+    }
+}
+
+/* Extra small devices (phones < 400px) */
+@media (max-width: 400px) {
+    .navbar-title {
+        font-size: 1rem;
+    }
+
+    .nav-button {
+        padding: 5px 8px;
+        font-size: 0.7rem;
+    }
+
+    .sensor-metrics {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .metric {
+        min-width: 100%;
+    }
+
+    select,
+    button,
+    input {
+        padding: 10px 12px;
+        font-size: 0.85rem;
     }
 }
 
@@ -579,48 +841,11 @@ hr {
 }
 
 .admin-tools {
-    margin-left: 240px;
+    margin-left: 0;
     display: flex;
     flex-direction: column;
     gap: 24px;
     animation: fadeIn 0.3s ease-in;
-}
-
-.admin-sidebar {
-    position: fixed;
-    top: 50%;
-    left: 20px;
-    transform: translateY(-50%);
-    width: 200px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    z-index: 100;
-}
-
-.admin-menu-item {
-    width: 100%;
-    padding: 14px 16px;
-    text-align: left;
-    background: #e2e8f0;
-    border: none;
-    border-radius: 12px;
-    font-size: 0.95rem;
-    color: #1e293b;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-family: inherit;
-}
-
-.admin-menu-item:hover {
-    background: #3b82f6;
-    color: white;
-    transform: translateX(4px);
-}
-
-.admin-menu-item.active {
-    background: #3b82f6;
-    color: white;
 }
 
 .admin-content {
@@ -817,5 +1042,128 @@ hr {
 
     .stat-value {
         font-size: 1.5rem;
+    }
+
+    /* Stack settings vertically on tablet/mobile */
+    .setting-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .setting-row label {
+        min-width: auto;
+        width: 100%;
+    }
+
+    .setting-row select,
+    .setting-row input {
+        width: 100%;
+    }
+
+    .admin-select {
+        width: 100% !important;
+        max-width: none;
+    }
+
+    .admin-input {
+        width: 100%;
+    }
+}
+
+/* Smartphone admin styles (max-width: 576px) */
+@media (max-width: 576px) {
+    .admin-page {
+        padding: 10px;
+    }
+
+    .admin-login-container {
+        padding: 25px 15px;
+        border-radius: 16px;
+    }
+
+    .admin-login-container h2 {
+        font-size: 1.5rem;
+    }
+
+    .admin-section {
+        padding: 15px;
+        border-radius: 12px;
+    }
+
+    .admin-section h3 {
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+    }
+
+    .admin-subsection {
+        padding: 15px;
+        border-radius: 12px;
+        margin-bottom: 15px;
+    }
+
+    .admin-subsection h4 {
+        font-size: 0.95rem;
+        margin-bottom: 12px;
+    }
+
+    .admin-subsection p {
+        font-size: 0.85rem;
+        margin-bottom: 8px;
+    }
+
+    .admin-btn {
+        padding: 14px 16px;
+        font-size: 1rem;
+        min-height: 50px;
+    }
+
+    .setting-row {
+        gap: 6px;
+    }
+
+    .setting-row label {
+        font-size: 0.9rem;
+    }
+
+    .admin-select {
+        padding: 12px 14px;
+        font-size: 0.95rem;
+        min-height: 48px;
+    }
+
+    .admin-input {
+        padding: 12px 14px;
+        font-size: 0.95rem;
+        min-height: 48px;
+    }
+
+    .stat-card {
+        padding: 15px;
+        min-height: 80px;
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+    }
+
+    .admin-date-range {
+        gap: 10px;
+    }
+
+    .admin-date-range input {
+        padding: 12px 14px;
+        font-size: 0.95rem;
+        min-height: 48px;
+    }
+
+    .nav-button {
+        padding: 12px 16px;
+        font-size: 1rem;
+        min-height: 50px;
     }
 }
