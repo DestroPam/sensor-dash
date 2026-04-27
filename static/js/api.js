@@ -317,10 +317,17 @@ async function loadLatestData(deviceName) {
             if (hasHum) metricSelect.innerHTML += `<option value="humidity">💧 Влажность (%)</option>`;
             if (hasPress) metricSelect.innerHTML += `<option value="pressure">⏲️ Давление (${getPressureUnitLabel(pressUnit)})</option>`;
 
-            // Если текущая метрика недоступна, выбираем первую доступную
-            if (!metricSelect.querySelector(`option[value="${currentMetric}"]`) && metricSelect.options.length > 0) {
-                currentMetric = metricSelect.options[0].value;
-                metricSelect.value = currentMetric;
+            // Устанавливаем значение select в соответствии с currentMetric
+            if (metricSelect.options.length > 0) {
+                const currentOption = metricSelect.querySelector(`option[value="${currentMetric}"]`);
+                if (currentOption) {
+                    metricSelect.value = currentMetric;
+                } else {
+                    currentMetric = metricSelect.options[0].value;
+                    metricSelect.value = currentMetric;
+                }
+            } else {
+                currentMetric = null;
             }
 
             // Показываем/скрываем блоки метрик

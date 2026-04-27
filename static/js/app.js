@@ -196,3 +196,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     startAutoUpdate();
     console.log('✅ Приложение готово к работе');
 });
+
+// Обработчик для кнопки "Назад" в браузере - перезагружаем настройки при возврате на страницу
+window.addEventListener('pageshow', async (event) => {
+    // event.persisted = true означает, что страница загружена из кеша (back/forward navigation)
+    if (event.persisted) {
+        console.log('📄 Страница загружена из кеша (кнопка Назад/Вперед) - обновляем настройки');
+        try {
+            await loadSystemConfig();
+            console.log('✅ Настройки перезагружены после возврата на страницу');
+            
+            // Перезагружаем данные чтобы применить новые настройки
+            if (viewMode === 'grid') {
+                await loadGridData();
+            } else if (currentDevice) {
+                await loadLatestData(currentDevice);
+                await loadChartData(currentDevice);
+            }
+        } catch (error) {
+            console.error('❌ Ошибка перезагрузки настроек:', error);
+        }
+    }
+});

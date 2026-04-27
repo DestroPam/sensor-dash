@@ -181,7 +181,10 @@ async function loadChartData(deviceName) {
                     maintainAspectRatio: true,
                     animation: { duration: 500 },
                     plugins: {
-                        legend: { position: 'top' },
+                        legend: { 
+                            position: 'top',
+                            onClick: null // Отключаем возможность скрытия графика по клику на легенде
+                        },
                         tooltip: {
                             mode: 'index',
                             intersect: false,
