@@ -329,9 +329,14 @@ body {
 }
 
 .chart-container {
+    height: 350px;
     margin: 24px 0;
     position: relative;
-    min-height: 350px;
+}
+
+#mainChart {
+    height: 100% !important;
+    width: 100% !important;
 }
 
 .controls {
@@ -670,14 +675,9 @@ hr {
         width: 100%;
     }
 
-    /* Chart */
+    /* Chart container height for mobile */
     .chart-container {
-        min-height: 280px;
-        margin: 16px 0;
-    }
-
-    #mainChart {
-        height: 280px !important;
+        height: 380px;
     }
 
     /* Hide less important elements on mobile */
@@ -700,27 +700,34 @@ hr {
          text-align: center;
      }
 
-     /* Mobile navbar - center buttons, larger login */
-     .navbar-buttons {
-         display: flex;
-         flex-direction: column;
-         align-items: center;
-         gap: 8px;
-     }
+    /* Mobile navbar - center buttons, larger login */
+    .navbar-buttons {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
 
-     .nav-button {
-         width: 100%;
-         max-width: 300px;
-         padding: 12px 20px;
-         font-size: 1rem;
-         border-radius: 30px;
-         text-align: center;
-     }
+    .nav-button {
+        width: 100%;
+        max-width: 300px;
+        padding: 12px 20px;
+        font-size: 1rem;
+        border-radius: 30px;
+        text-align: center;
+    }
 
-     #navLoginBtn {
-         background: #3b82f6;
-         font-weight: 600;
-     }
+    #navLoginBtn {
+        background: #3b82f6;
+        font-weight: 600;
+    }
+}
+
+/* Tablet-specific (577px - 900px) */
+@media (min-width: 577px) and (max-width: 900px) {
+    .chart-container {
+        height: 320px;
+    }
 }
 
 /* Ensure mobile back button hidden on desktop */
@@ -730,33 +737,33 @@ hr {
     }
 }
 
-/* Extra small devices (phones < 400px) */
-@media (max-width: 400px) {
-    .navbar-title {
-        font-size: 1rem;
-    }
+    /* Extra small devices (phones < 400px) */
+    @media (max-width: 400px) {
+        .navbar-title {
+            font-size: 1rem;
+        }
 
-    .nav-button {
-        padding: 5px 8px;
-        font-size: 0.7rem;
-    }
+        .nav-button {
+            padding: 5px 8px;
+            font-size: 0.7rem;
+        }
 
-    .sensor-metrics {
-        flex-direction: column;
-        gap: 8px;
-    }
+        .sensor-metrics {
+            flex-direction: column;
+            gap: 8px;
+        }
 
-    .metric {
-        min-width: 100%;
-    }
+        .metric {
+            min-width: 100%;
+        }
 
-    select,
-    button,
-    input {
-        padding: 10px 12px;
-        font-size: 0.85rem;
+        select,
+        button,
+        input {
+            padding: 10px 12px;
+            font-size: 0.85rem;
+        }
     }
-}
 
 /* Admin Page Styles */
 .admin-page {

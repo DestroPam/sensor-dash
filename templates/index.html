@@ -104,23 +104,7 @@
      <script src="/static/js/chart.js"></script>
      <script src="/static/js/app.js"></script>
 
-     <script>
-         // Adjust chart canvas height for mobile on load and resize
-         function adjustChartForMobile() {
-             const canvas = document.getElementById('mainChart');
-             if (!canvas) return;
-             if (window.innerWidth <= 576) {
-                 canvas.height = 280;
-             } else if (window.innerWidth <= 900) {
-                 canvas.height = 320;
-             } else {
-                 canvas.height = 350;
-             }
-         }
-
-         window.addEventListener('load', adjustChartForMobile);
-         window.addEventListener('resize', adjustChartForMobile);
-     </script>
+     <!-- No manual resize needed: Chart.js responsive + CSS container heights handle it -->
 
 </body>
 

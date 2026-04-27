@@ -178,7 +178,7 @@ async function loadChartData(deviceName) {
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: true,
+                    maintainAspectRatio: false,
                     animation: { duration: 500 },
                     plugins: {
                         legend: { 
