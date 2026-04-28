@@ -132,9 +132,6 @@ function setupEventListeners() {
         console.warn('⚠️ Mobile back button not found');
     }
 
-    document.getElementById('refreshChartBtn').onclick = () => {
-        if (currentDevice) loadChartData(currentDevice);
-    };
     document.getElementById('refreshSensorsBtn').onclick = () => {
         loadDevices();
         loadGridData();
@@ -143,12 +140,20 @@ function setupEventListeners() {
         if (currentDevice) loadChartData(currentDevice);
     };
     document.getElementById('periodPreset').onchange = toggleCustomDateRange;
-    document.getElementById('applyCustomRange').onclick = () => {
-        if (currentDevice) {
-            stopLiveChartUpdates();
-            loadChartData(currentDevice);
-        }
-    };
+    
+    // Автообновление графика при изменении дат в кастомном периоде
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    if (startDateInput && endDateInput) {
+        const triggerChartUpdate = () => {
+            if (currentDevice && document.getElementById('periodPreset').value === 'custom') {
+                stopLiveChartUpdates();
+                loadChartData(currentDevice);
+            }
+        };
+        startDateInput.addEventListener('change', triggerChartUpdate);
+        endDateInput.addEventListener('change', triggerChartUpdate);
+    }
     
     // Navbar buttons
     document.getElementById('navLoginBtn').onclick = () => {

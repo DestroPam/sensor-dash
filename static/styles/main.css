@@ -347,6 +347,91 @@ body {
     align-items: center;
 }
 
+/* Control elements styling */
+.controls select,
+.controls button,
+.controls input {
+    padding: 10px 16px;
+    font-size: 0.95rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    background: white;
+    color: #1e293b;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.controls select:hover,
+.controls button:hover,
+.controls input:hover {
+    border-color: #3b82f6;
+}
+
+.controls select:focus,
+.controls input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.controls button {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    min-width: 100px;
+}
+
+.controls button:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+}
+
+.controls button:active {
+    transform: translateY(0);
+}
+
+#refreshSensorsBtn {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    font-size: 0.95rem;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+    min-height: 44px;
+}
+
+#refreshSensorsBtn:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+}
+
+#refreshSensorsBtn:active {
+    transform: translateY(0);
+}
+
+#metricType {
+    min-width: 220px;
+}
+
+#periodPreset {
+    min-width: 180px;
+}
+
+#customDateRange {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+#customDateRange input {
+    flex: 1;
+    min-width: 180px;
+}
+
 /* Button base styles with consistent height */
 .nav-button,
 button,
@@ -657,21 +742,12 @@ hr {
         min-height: 42px;
     }
 
-    #refreshChartBtn {
-        width: 100%;
-        margin-top: 8px;
-    }
-
     #customDateRange {
         flex-direction: column;
         width: 100%;
     }
 
     #customDateRange input {
-        width: 100%;
-    }
-
-    #applyCustomRange {
         width: 100%;
     }
 
