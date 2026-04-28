@@ -165,7 +165,7 @@ async function loadGridData() {
             gridHtml += `
                 <div class="sensor-tile" data-device="${escapeHtml(deviceName)}" onclick="showDetailView('${escapeHtml(deviceName)}')">
                     <div class="tile-header">
-                        <span class="tile-device-name" ondblclick="startEditSensor('${escapeHtml(deviceName)}', this, '${escapeHtml(displayName)}')" style="cursor: default; user-select: none;">${escapeHtml(displayName)}</span>
+                        <span class="tile-device-name" style="cursor: default; user-select: none;">${escapeHtml(displayName)}</span>
                         <span class="tile-status">${status}</span>
                     </div>
                     <div class="tile-metrics">
@@ -254,7 +254,6 @@ async function loadDevices() {
             const sensorName = document.createElement('div');
             sensorName.className = 'sensor-name';
             sensorName.innerHTML = escapeHtml(displayName);
-            sensorName.ondblclick = (e) => startEditSensor(deviceName, sensorName, displayName);
             sensorName.style.cursor = 'default';
 
             nameDiv.appendChild(sensorName);
