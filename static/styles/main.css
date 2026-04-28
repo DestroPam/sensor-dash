@@ -79,6 +79,10 @@ body {
     height: fit-content;
 }
 
+.sensors-panel h3 {
+    margin-bottom: 16px;
+}
+
 .main-panel {
     flex: 3;
     min-width: 500px;
