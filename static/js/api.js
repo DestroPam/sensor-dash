@@ -61,10 +61,8 @@ function loadDeviceOrder() {
 
 function saveDeviceOrder(items, location) {
     const deviceOrder = Array.from(items).map(item => {
-        const nameEl = item.querySelector('.tile-device-name');
-        let name = nameEl ? nameEl.textContent : '';
-        if (name.startsWith('📌 ')) name = name.substring(2);
-        return name;
+        // Получаем реальное имя датчика из data-device атрибута, а не отображаемое имя
+        return item.getAttribute('data-device') || '';
     });
 
     // Удаляем дубликаты
