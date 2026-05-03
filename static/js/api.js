@@ -120,6 +120,20 @@ async function loadGridData() {
         const latestMap = {};
         latestData.forEach(item => { latestMap[item.device_name] = item; });
         
+        // Safety filter: only display devices that have actual data
+        const devicesWithData = sortedDevices.filter(device => {
+            const deviceName = typeof device === 'string' ? device : device.device_name;
+            return deviceName in latestMap;
+        });
+        
+        if (devicesWithData.length === 0) {
+            console.log('⚠️ Нет датчиков с данными');
+            container.innerHTML = '<div class="empty-grid">Нет данных<br>Запустите эмулятор датчиков</div>';
+            return;
+        }
+        
+        console.log('🔍 После фильтрации осталось датчиков:', devicesWithData.length);
+        
         // Get offline timeout from settings
         const offlineTimeout = (window.systemConfig && window.systemConfig.offlineTimeout) || 60;
         const tempUnit = (window.systemConfig && window.systemConfig.tempUnit) || 'celsius';
@@ -129,7 +143,7 @@ async function loadGridData() {
         const timezoneAdjustment = timezoneOffset - serverOffset;
         
         let gridHtml = '';
-        sortedDevices.forEach((device) => {
+        devicesWithData.forEach((device) => {
             const deviceName = typeof device === 'string' ? device : device.device_name;
             const displayName = typeof device === 'string' ? device : device.display_name;
             const latest = latestMap[deviceName];
@@ -203,7 +217,6 @@ async function loadDevices() {
         }
 
         const sortedDevices = sortDevices(devices, 'list');
-        window.allDevices = sortedDevices;
         const latestResponse = await fetch('/api/data/latest');
         if (!latestResponse.ok) throw new Error(`API error: ${latestResponse.status}`);
 
@@ -211,20 +224,32 @@ async function loadDevices() {
         console.log('✅ Данные датчиков загружены:', latestData.length);
 
         const container = document.getElementById('sensorsList');
-        if (sortedDevices.length === 0) {
+        
+        const latestMap = {};
+        latestData.forEach(item => { latestMap[item.device_name] = item; });
+        
+        // Safety filter: only display devices that have actual data
+        const devicesWithData = sortedDevices.filter(device => {
+            const deviceName = typeof device === 'string' ? device : device.device_name;
+            return deviceName in latestMap;
+        });
+        
+        // Update window.allDevices to only include devices with data
+        window.allDevices = devicesWithData;
+        
+        if (devicesWithData.length === 0) {
             console.log('⚠️ Список датчиков пуст');
             container.innerHTML = '<div style="text-align: center; padding: 20px; color: #94a3b8;">Нет данных<br>Запустите эмулятор</div>';
             return;
         }
-
-        const latestMap = {};
-        latestData.forEach(item => { latestMap[item.device_name] = item; });
+        
+        console.log('🔍 После фильтрации осталось датчиков:', devicesWithData.length);
         
         // Get offline timeout from settings
         const offlineTimeout = (window.systemConfig && window.systemConfig.offlineTimeout) || 60;
         
         container.innerHTML = '';
-        sortedDevices.forEach(device => {
+        devicesWithData.forEach(device => {
             const deviceName = typeof device === 'string' ? device : device.device_name;
             const displayName = typeof device === 'string' ? device : device.display_name;
             const latest = latestMap[deviceName];

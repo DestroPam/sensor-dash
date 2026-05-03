@@ -295,6 +295,19 @@ async function adminDeleteData() {
             messageEl.style.display = 'block';
             startDateInput.value = '';
             endDateInput.value = '';
+            
+            // Clear deleted device from order arrays if it was a complete device deletion
+            if (device && !startDate && !endDate) {
+                // Complete device deletion - remove from order arrays
+                listDeviceOrder = listDeviceOrder.filter(d => d !== device);
+                gridDeviceOrder = gridDeviceOrder.filter(d => d !== device);
+                console.log('✅ Удален датчик из порядка:', device);
+            } else if (!device && startDate && endDate) {
+                // Date range deletion - refresh order arrays from server
+                console.log('🔄 Обновление порядка после удаления по датам...');
+                await loadDeviceOrder();
+            }
+            
             await loadDevices();
             await loadStatistics();
         } else {
@@ -322,6 +335,12 @@ async function adminDeleteAll() {
             messageEl.textContent = `Удалено ${result.deleted_count} записей`;
             messageEl.className = 'admin-message success';
             messageEl.style.display = 'block';
+            
+            // Clear all order arrays since all data is deleted
+            listDeviceOrder = [];
+            gridDeviceOrder = [];
+            console.log('✅ Все порядки очищены');
+            
             await loadDevices();
             await loadStatistics();
         } else {

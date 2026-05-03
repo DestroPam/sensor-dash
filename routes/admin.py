@@ -1,9 +1,40 @@
 from flask import Blueprint, jsonify, request, session
-from models import db, SensorData, DeviceAlias, User, SystemSettings
+from models import db, SensorData, DeviceAlias, User, SystemSettings, DeviceOrder
 from datetime import datetime
 from functools import wraps
+import json
 
 admin_bp = Blueprint('admin', __name__)
+
+
+def remove_device_completely(device_name):
+    """Удалить датчик полностью из программы"""
+    try:
+        # 1. Удалить alias датчика
+        DeviceAlias.query.filter_by(device_name=device_name).delete(synchronize_session=False)
+        
+        # 2. Обновить device_order - переделать JSON списки без удаленного датчика
+        all_orders = DeviceOrder.query.all()
+        for order_record in all_orders:
+            try:
+                if order_record.device_order:
+                    device_list = json.loads(order_record.device_order)
+                    if isinstance(device_list, list) and device_name in device_list:
+                        # Создать новый список без удаленного датчика
+                        new_list = [d for d in device_list if d != device_name]
+                        # Обновить запись
+                        order_record.device_order = json.dumps(new_list)
+                        # Явно добавить в сессию
+                        db.session.add(order_record)
+            except (json.JSONDecodeError, TypeError) as e:
+                print(f"Error processing device_order: {e}")
+        
+        # Явно выполнить все изменения
+        db.session.flush()
+        
+    except Exception as e:
+        print(f"Error in remove_device_completely: {e}")
+        raise
 
 
 def login_required(f):
@@ -111,7 +142,11 @@ def admin_change_password():
 @login_required
 def admin_delete_device_data(device_name):
     try:
-        deleted = SensorData.query.filter_by(device_name=device_name).delete()
+        deleted = SensorData.query.filter_by(device_name=device_name).delete(synchronize_session=False)
+        
+        # Полностью удалить датчик из программы
+        remove_device_completely(device_name)
+        
         db.session.commit()
         return jsonify({"status": "success", "deleted_count": deleted}), 200
     except Exception as e:
@@ -123,7 +158,14 @@ def admin_delete_device_data(device_name):
 @login_required
 def admin_delete_all_data():
     try:
-        deleted = SensorData.query.delete()
+        deleted = SensorData.query.delete(synchronize_session=False)
+        
+        # Удалить все aliases и очистить порядок устройств
+        DeviceAlias.query.delete(synchronize_session=False)
+        for order_record in DeviceOrder.query.all():
+            order_record.device_order = "[]"
+            db.session.add(order_record)
+        
         db.session.commit()
         return jsonify({"status": "success", "deleted_count": deleted}), 200
     except Exception as e:
@@ -150,7 +192,28 @@ def admin_delete_range():
                 SensorData.timestamp >= start, SensorData.timestamp <= end
             )
 
-        deleted = query.delete()
+        deleted = query.delete(synchronize_session=False)
+        
+        # Необходимо выполнить flush() перед проверкой остатков
+        db.session.flush()
+        
+        # Если удаляются все данные конкретного датчика, полностью его удалить
+        if device_name:
+            remaining_data = SensorData.query.filter_by(device_name=device_name).first()
+            if not remaining_data:
+                remove_device_completely(device_name)
+        else:
+            # Если удаляются все данные без фильтра, очистить все orphaned датчики
+            # Получить все оставшиеся датчики ИЗ БД после удаления
+            remaining_devices = db.session.query(SensorData.device_name).distinct().all()
+            existing_devices = set(device[0] for device in remaining_devices)
+            
+            # Получить все aliases
+            all_aliases = DeviceAlias.query.all()
+            for alias in all_aliases:
+                if alias.device_name not in existing_devices:
+                    remove_device_completely(alias.device_name)
+        
         db.session.commit()
         return jsonify({"status": "success", "deleted_count": deleted}), 200
     except Exception as e:
