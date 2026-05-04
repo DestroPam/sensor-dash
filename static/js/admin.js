@@ -132,8 +132,13 @@ async function loadDeviceDateRange(deviceName) {
         const responseDesc = await fetch(`/api/data/device/${encodeURIComponent(deviceName)}?sort=desc&limit=1`);
         const descData = await responseDesc.json();
         if (ascData.length > 0 && descData.length > 0) {
-            const start = new Date(ascData[0].timestamp);
-            const end = new Date(descData[0].timestamp);
+            let start = new Date(ascData[0].timestamp);
+            let end = new Date(descData[0].timestamp);
+            
+            // Добавить отклонения в обе стороны (1 день) для уверенности что все данные захватены
+            start.setDate(start.getDate() - 1);
+            end.setDate(end.getDate() + 1);
+            
             const toLocalDatetime = (date) => {
                 const offset = date.getTimezoneOffset();
                 const local = new Date(date.getTime() - offset * 60000);
@@ -505,11 +510,6 @@ if (isAdminPage) {
         if (adminImportBtn) adminImportBtn.onclick = adminImportData;
 
         loadSettings();
-
-        setInterval(async () => {
-            await loadDevices();
-            await loadStatistics();
-        }, 10000);
 
         document.getElementById('adminUsername').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') adminLogin();
