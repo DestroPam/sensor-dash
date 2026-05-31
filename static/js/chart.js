@@ -57,7 +57,9 @@ async function loadChartData(deviceName) {
     if (!deviceName) return;
     currentMetric = document.getElementById('metricType').value;
     const periodPreset = document.getElementById('periodPreset').value;
-    let url = `/api/data/device/${encodeURIComponent(deviceName)}?limit=5000`;
+    // Используем большой лимит для "все данные", меньший для других запросов
+    const limit = (periodPreset === 'all') ? 1000000 : 5000;
+    let url = `/api/data/device/${encodeURIComponent(deviceName)}?limit=${limit}`;
     if (periodPreset === 'custom') {
         const startDate = document.getElementById('startDate').value;
         const endDate = document.getElementById('endDate').value;
